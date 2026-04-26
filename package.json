@@ -1,0 +1,35 @@
+{
+  "name": "desbrava",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Porozin/Desbrava.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Porozin/Desbrava/issues"
+  },
+  "homepage": "https://github.com/Porozin/Desbrava#readme",
+  "dependencies": {
+    "firebase": "^12.12.1",
+    "lucide-react": "^1.11.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.4"
+  }
+}
