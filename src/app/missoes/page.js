@@ -5,13 +5,17 @@ import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
 import { collection, getDocs, addDoc, serverTimestamp, query } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ScrollText, Swords, ShieldPlus } from "lucide-react";
+import { ChevronLeft, ScrollText, Swords, ShieldPlus, Brain } from "lucide-react";
 
 export default function MissoesPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [missoes, setMissoes] = useState([]);
   const [loadingMissoes, setLoadingMissoes] = useState(true);
+  
+  const [missaoAtiva, setMissaoAtiva] = useState(null); // Para abrir o input de prova
+  const [provaTexto, setProvaTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -38,26 +42,35 @@ export default function MissoesPage() {
     setLoadingMissoes(false);
   };
 
-  const entregarMissao = async (missao) => {
+  const entregarMissao = async (e) => {
+    e.preventDefault();
+    if (!provaTexto.trim()) return alert("Você deve escrever a prova da sua missão!");
+    setEnviando(true);
+
     try {
       await addDoc(collection(db, "entregas"), {
         userId: user.uid,
         userName: user.displayName,
-        missaoId: missao.id,
-        missaoTitulo: missao.titulo,
-        xpRecompensa: missao.xp,
+        missaoId: missaoAtiva.id,
+        missaoTitulo: missaoAtiva.titulo,
+        xpRecompensa: missaoAtiva.xp,
+        provaTexto: provaTexto,
         status: "pendente",
         data: serverTimestamp()
       });
-      alert(`O relatório da missão "${missao.titulo}" foi enviado aos mestres!`);
+      alert(`O relatório da missão "${missaoAtiva.titulo}" foi enviado aos mestres!`);
+      setMissaoAtiva(null);
+      setProvaTexto("");
     } catch (error) {
       alert("Falha na comunicação com o sistema.");
     }
+    setEnviando(false);
   };
 
   const getIcon = (cat) => {
     if (cat === "Espiritual") return <ScrollText size={18} />;
     if (cat === "Física") return <Swords size={18} />;
+    if (cat === "Mental") return <Brain size={18} />;
     return <ShieldPlus size={18} />;
   };
 
@@ -83,7 +96,7 @@ export default function MissoesPage() {
             <div key={missao.id} className="glass-card" style={{ padding: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`badge ${missao.categoria === 'Espiritual' ? 'badge-blue' : 'badge-green'}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className={`badge ${missao.categoria === 'Espiritual' ? 'badge-blue' : missao.categoria === 'Física' ? 'badge-green' : 'badge-purple'}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {getIcon(missao.categoria)} {missao.categoria}
                   </span>
                 </div>
@@ -97,9 +110,31 @@ export default function MissoesPage() {
                 {missao.descricao}
               </p>
               
-              <button className="btn-secondary" style={{ width: '100%', borderColor: 'rgba(59, 130, 246, 0.5)', color: '#60a5fa' }} onClick={() => entregarMissao(missao)}>
-                REPORTAR CONCLUSÃO
-              </button>
+              {missaoAtiva?.id === missao.id ? (
+                <form onSubmit={entregarMissao} style={{ marginTop: '10px', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                  <label style={{ color: '#fff', fontSize: '0.85rem', marginBottom: '8px', display: 'block' }}>Escreva o seu relatório (Prova):</label>
+                  <textarea 
+                    autoFocus
+                    rows={3}
+                    placeholder="Ex: Eu completei a missão e aprendi que..."
+                    value={provaTexto}
+                    onChange={(e) => setProvaTexto(e.target.value)}
+                    style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none', marginBottom: '12px', resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button type="submit" className="btn-primary" disabled={enviando} style={{ flex: 1, padding: '10px' }}>
+                      {enviando ? "ENVIANDO..." : "ENVIAR PROVA"}
+                    </button>
+                    <button type="button" onClick={() => setMissaoAtiva(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button className="btn-secondary" style={{ width: '100%', borderColor: 'rgba(59, 130, 246, 0.5)', color: '#60a5fa' }} onClick={() => setMissaoAtiva(missao)}>
+                  REPORTAR CONCLUSÃO
+                </button>
+              )}
             </div>
           ))}
         </div>
