@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Shield, Sparkles, KeyRound } from "lucide-react";
 
 export default function LoginPage() {
-  const { user, loginWithGoogle, loginCounselor, loginAsAdmin, loading } = useAuth();
+  const { user, loginWithGoogle, loginCounselor, loginAsAdmin, registerCounselor, loading } = useAuth();
   const router = useRouter();
 
   const [showMasterLogin, setShowMasterLogin] = useState(false);

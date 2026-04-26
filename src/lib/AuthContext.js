@@ -44,8 +44,10 @@ export const AuthProvider = ({ children }) => {
           userData = { ...userData, ...userDoc.data() };
         } else {
           // Documento novo, status "pending_creation"
+          const isPasswordUser = currentUser.providerData.some(p => p.providerId === 'password');
+          
           userData.status = "pending_creation";
-          userData.role = "desbravador"; // default, conselheiros serão setados manualmente no banco pelo admin depois
+          userData.role = isPasswordUser ? "admin" : "desbravador";
           userData.xp = 0;
           userData.level = 1;
           

@@ -39,10 +39,15 @@ export default function DashboardPage() {
 
   return (
     <div className="container animate-slide-up">
-      <header className="page-header" style={{ justifyContent: 'space-between' }}>
+      <header className="page-header" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>STATUS DO JOGADOR</h2>
-          <h1 className="page-title">{user.displayName?.split(' ')[0] || "CAÇADOR"}</h1>
+          <h1 className="page-title" style={{ marginBottom: '4px' }}>{user.displayName?.split(' ')[0] || "CAÇADOR"}</h1>
+          {user.role === 'admin' && (
+            <span style={{ display: 'inline-block', background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+              Mestre Conselheiro
+            </span>
+          )}
         </div>
         <div style={{ position: 'relative' }}>
           <div style={{ width: '56px', height: '56px', borderRadius: '14px', border: '2px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', background: 'rgba(255,255,255,0.05)' }}>

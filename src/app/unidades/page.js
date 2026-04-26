@@ -49,9 +49,16 @@ export default function UnidadesPage() {
               <div style={{ fontSize: '2rem', background: 'rgba(255,255,255,0.05)', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
                 {m.photoURL && m.photoURL.length <= 4 ? m.photoURL : "🛡️"}
               </div>
-              <div>
-                <h3 style={{ fontSize: '0.9rem', margin: 0, color: '#fff' }}>{m.displayName}</h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>LVL {Math.floor((m.xp || 0) / 100) + 1}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '0.9rem', margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {m.displayName}
+                </h3>
+                {m.role === 'admin' && (
+                  <span style={{ fontSize: '0.65rem', color: '#fca5a5', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 4px', borderRadius: '4px', marginTop: '4px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                    CONSELHEIRO
+                  </span>
+                )}
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>LVL {Math.floor((m.xp || 0) / 100) + 1}</span>
               </div>
             </div>
           ))}
