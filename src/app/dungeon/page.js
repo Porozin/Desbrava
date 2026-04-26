@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Skull } from "lucide-react";
 
@@ -92,66 +93,66 @@ export default function DungeonPage() {
         iaFeedback: iaFeedback,
         data: serverTimestamp()
       });
-      alert(alertMessage);
+      toast.success(alertMessage, { duration: 5000 });
       router.push("/dashboard");
     } catch (error) {
-      alert("Falha na magia de comunicação.");
+      toast.error("Falha na magia de comunicação.");
     }
     setEnviando(false);
   };
 
   if (loading || !user) return null;
 
-  const currentStep = historia[step];
-
   return (
-    <div className="container animate-slide-up" style={{ minHeight: '100vh', background: 'radial-gradient(circle at center, #1e1b4b, #000)' }}>
-      <header className="page-header" style={{ marginBottom: '40px' }}>
+    <div className="container animate-slide-up" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <header className="page-header" style={{ marginBottom: '20px' }}>
         <button className="back-button" onClick={() => router.push("/dashboard")}>
           <ChevronLeft size={24} />
         </button>
         <div>
-          <h1 className="page-title" style={{ fontSize: '1.5rem', background: 'linear-gradient(90deg, #db2777, #7e22ce)', WebkitBackgroundClip: 'text' }}>Masmorra Semanal</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Evento Especial</p>
+          <h1 className="page-title" style={{ fontSize: '1.4rem', color: '#f87171' }}>Masmorra Semanal</h1>
         </div>
       </header>
 
-      <div className="glass-card" style={{ padding: '30px', borderTop: '2px solid #db2777', boxShadow: '0 10px 40px rgba(219, 39, 119, 0.2)' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-          <Skull size={48} color="#db2777" />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)' }}>
+            <Skull size={40} />
+          </div>
+          <h2 style={{ fontSize: '1.2rem', marginBottom: '10px', color: '#fff' }}>A Caverna do Desespero</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+            {historia[step].texto}
+          </p>
         </div>
-        
-        <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: '#e2e8f0', marginBottom: '30px', fontStyle: 'italic', textAlign: 'center' }}>
-          "{currentStep.texto}"
-        </p>
 
-        {!currentStep.isFinal ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {currentStep.escolhas.map((escolha, idx) => (
+        {historia[step].isFinal ? (
+          <form onSubmit={finalizarDungeon} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <textarea 
+              rows={4}
+              required
+              placeholder="Escreva sua resposta..."
+              value={respostaDungeon}
+              onChange={e => setRespostaDungeon(e.target.value)}
+              style={{ width: '100%', padding: '15px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', color: '#fff', resize: 'vertical', outline: 'none' }}
+            />
+            <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(90deg, #ef4444, #b91c1c)' }} disabled={enviando}>
+              {enviando ? "ENVIANDO..." : "ENFRENTAR A ESTÁTUA"}
+            </button>
+          </form>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {historia[step].escolhas.map((escolha, index) => (
               <button 
-                key={idx} 
+                key={index}
                 className="btn-secondary" 
-                style={{ borderColor: '#7e22ce', color: '#e9d5ff' }}
+                style={{ width: '100%', padding: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 onClick={() => setStep(escolha.proximoStep)}
               >
                 {escolha.texto}
+                <ChevronLeft size={20} style={{ transform: 'rotate(180deg)', color: 'var(--text-muted)' }}/>
               </button>
             ))}
           </div>
-        ) : (
-          <form onSubmit={finalizarDungeon}>
-            <textarea 
-              autoFocus
-              rows={4}
-              placeholder="Digite sua resposta aqui..."
-              value={respostaDungeon}
-              onChange={(e) => setRespostaDungeon(e.target.value)}
-              style={{ width: '100%', padding: '16px', background: 'rgba(0,0,0,0.5)', border: '1px solid #7e22ce', borderRadius: '10px', color: '#fff', outline: 'none', marginBottom: '20px', resize: 'vertical' }}
-            />
-            <button type="submit" className="btn-primary" disabled={enviando} style={{ width: '100%', background: 'linear-gradient(135deg, #db2777, #7e22ce)' }}>
-              {enviando ? "SELANDO MAGIA..." : "OFERECER RESPOSTA"}
-            </button>
-          </form>
         )}
       </div>
     </div>

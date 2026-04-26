@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
 import { collection, getDocs, addDoc, serverTimestamp, query, doc, updateDoc, increment } from "firebase/firestore";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ScrollText, Swords, ShieldPlus, Brain } from "lucide-react";
 
@@ -131,48 +132,72 @@ export default function MissoesPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className={`badge ${missao.categoria === 'Espiritual' ? 'badge-blue' : missao.categoria === 'Física' ? 'badge-green' : 'badge-purple'}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {getIcon(missao.categoria)} {missao.categoria}
-                  </span>
+      {missaoAtiva && (
+        <div className="glass-card" style={{ padding: '24px', marginBottom: '24px', border: '1px solid var(--accent-primary)', animation: 'slideUp 0.3s ease' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '1.2rem', margin: 0, color: '#fff' }}>{missaoAtiva.titulo}</h2>
+            <button onClick={() => setMissaoAtiva(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              X
+            </button>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '20px', lineHeight: '1.5' }}>
+            {missaoAtiva.descricao}
+          </p>
+
+          <form onSubmit={entregarMissao} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Prova da Conclusão (Relatório)</label>
+              <textarea 
+                rows="4" 
+                required
+                placeholder="Descreva detalhadamente como você completou esta missão..."
+                value={provaTexto}
+                onChange={(e) => setProvaTexto(e.target.value)}
+                style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'vertical', outline: 'none' }}
+              ></textarea>
+            </div>
+            <button type="submit" className="btn-primary" disabled={enviando}>
+              {enviando ? "Enviando Relatório..." : "Reportar Conclusão"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {loadingMissoes ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>Procurando pergaminhos...</div>
+        ) : (
+          missoes.map(missao => (
+            <div key={missao.id} className="glass-card" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
+              <span style={{ position: 'absolute', top: '20px', right: '20px', fontSize: '0.7rem', padding: '4px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                {missao.categoria}
+              </span>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
+                  <ScrollText size={20} />
                 </div>
-                <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '4px 12px', borderRadius: '8px', color: 'var(--warning)', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  +{missao.xp} XP
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', paddingRight: '60px' }}>{missao.titulo}</h3>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--warning)', fontWeight: 'bold' }}>+{missao.xp} XP</span>
                 </div>
               </div>
-              
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#fff' }}>{missao.titulo}</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '20px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px', lineHeight: '1.4' }}>
                 {missao.descricao}
               </p>
               
-              {missaoAtiva?.id === missao.id ? (
-                <form onSubmit={entregarMissao} style={{ marginTop: '10px', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                  <label style={{ color: '#fff', fontSize: '0.85rem', marginBottom: '8px', display: 'block' }}>Escreva o seu relatório (Prova):</label>
-                  <textarea 
-                    autoFocus
-                    rows={3}
-                    placeholder="Ex: Eu completei a missão e aprendi que..."
-                    value={provaTexto}
-                    onChange={(e) => setProvaTexto(e.target.value)}
-                    style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none', marginBottom: '12px', resize: 'vertical' }}
-                  />
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button type="submit" className="btn-primary" disabled={enviando} style={{ flex: 1, padding: '10px' }}>
-                      {enviando ? "ENVIANDO..." : "ENVIAR PROVA"}
-                    </button>
-                    <button type="button" onClick={() => setMissaoAtiva(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}>
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <button className="btn-secondary" style={{ width: '100%', borderColor: 'rgba(59, 130, 246, 0.5)', color: '#60a5fa' }} onClick={() => setMissaoAtiva(missao)}>
-                  REPORTAR CONCLUSÃO
+              {missaoAtiva?.id !== missao.id && (
+                <button 
+                  className="btn-secondary" 
+                  onClick={() => { setMissaoAtiva(missao); setProvaTexto(""); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                  Aceitar Missão
                 </button>
               )}
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }

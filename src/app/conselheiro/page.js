@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
-import { collection, getDocs, addDoc, updateDoc, doc, increment, query, where, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, query, where, addDoc, serverTimestamp, increment } from "firebase/firestore";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Check, X, Plus } from "lucide-react";
 
@@ -86,11 +87,11 @@ export default function ConselheiroPage() {
         usarIA: novaMissao.usarIA,
         dataCriacao: serverTimestamp()
       });
-      alert("Nova missão forjada com sucesso!");
+      toast.success("Nova missão forjada com sucesso!");
       setNovaMissao({ titulo: "", descricao: "", xp: 10, categoria: "Espiritual", usarIA: false });
       setActiveTab("entregas");
     } catch (error) {
-      alert("Erro ao forjar missão.");
+      toast.error("Erro ao forjar missão.");
     }
     setIsSaving(false);
   };
