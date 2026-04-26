@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ScrollText, Swords, ShieldPlus, Brain } from "lucide-react";
 
 export default function MissoesPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, updateUserData } = useAuth();
   const router = useRouter();
   const [missoes, setMissoes] = useState([]);
   const [loadingMissoes, setLoadingMissoes] = useState(true);
@@ -50,6 +50,7 @@ export default function MissoesPage() {
     try {
       let statusEntrega = "pendente";
       let alertMessage = `O relatório da missão "${missaoAtiva.titulo}" foi enviado aos mestres!`;
+      let iaFeedback = null;
 
       // Se a missão tiver IA ativada
       if (missaoAtiva.usarIA) {
@@ -64,11 +65,13 @@ export default function MissoesPage() {
 
         if (res.ok) {
           const data = await res.json();
+          iaFeedback = data.rawText;
           if (data.resultado === "APROVADO") {
             statusEntrega = "aprovada";
             alertMessage = `A Inteligência Mágica APROVOU sua missão instantaneamente! +${missaoAtiva.xp} XP!`;
-            // Atualiza XP do usuário na hora
-            await updateDoc(doc(db, "users", user.uid), { xp: increment(missaoAtiva.xp) });
+            // Atualiza XP do usuário na hora no banco e na tela
+            await updateDoc(doc(db, "users", user.uid), { xp: increment(Number(missaoAtiva.xp)) });
+            updateUserData({ xp: (user.xp || 0) + Number(missaoAtiva.xp) });
           } else {
             statusEntrega = "pendente"; // Rejeitado pela IA vai para análise humana
             alertMessage = "A IA não se convenceu. Seu relatório foi enviado para análise humana dos Mestres.";
@@ -81,9 +84,10 @@ export default function MissoesPage() {
         userName: user.displayName,
         missaoId: missaoAtiva.id,
         missaoTitulo: missaoAtiva.titulo,
-        xpRecompensa: missaoAtiva.xp,
+        xpRecompensa: Number(missaoAtiva.xp),
         provaTexto: provaTexto,
         status: statusEntrega,
+        iaFeedback: iaFeedback,
         data: serverTimestamp()
       });
       

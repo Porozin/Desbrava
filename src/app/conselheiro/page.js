@@ -11,8 +11,9 @@ export default function ConselheiroPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   
-  const [activeTab, setActiveTab] = useState("entregas"); // "entregas" ou "forja"
+  const [activeTab, setActiveTab] = useState("entregas"); // "entregas", "historico" ou "forja"
   const [entregas, setEntregas] = useState([]);
+  const [historico, setHistorico] = useState([]);
   const [loadingEntregas, setLoadingEntregas] = useState(true);
 
   // Estados do formulário de criação
@@ -28,10 +29,14 @@ export default function ConselheiroPage() {
 
   const fetchEntregas = async () => {
     try {
-      const q = query(collection(db, "entregas"), where("status", "==", "pendente"));
-      const querySnapshot = await getDocs(q);
-      const fetchedEntregas = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setEntregas(fetchedEntregas);
+      const qPendentes = query(collection(db, "entregas"), where("status", "==", "pendente"));
+      const snapshotPendentes = await getDocs(qPendentes);
+      setEntregas(snapshotPendentes.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      const qAprovadas = query(collection(db, "entregas"), where("status", "==", "aprovada"));
+      const snapshotAprovadas = await getDocs(qAprovadas);
+      setHistorico(snapshotAprovadas.docs.map(d => ({ id: d.id, ...d.data() })));
+
     } catch (error) {
       console.error("Erro ao buscar entregas", error);
     }
@@ -40,9 +45,10 @@ export default function ConselheiroPage() {
 
   const aprovarEntrega = async (entrega) => {
     try {
-      await updateDoc(doc(db, "entregas", entrega.id), { status: "aprovada" });
+      await updateDoc(doc(db, "entregas", entrega.id), { status: "aprovada", iaFeedback: "Aprovado manualmente pelo Mestre." });
       await updateDoc(doc(db, "users", entrega.userId), { xp: increment(entrega.xpRecompensa) });
       setEntregas(entregas.filter(e => e.id !== entrega.id));
+      fetchEntregas(); // recarrega histórico
     } catch (error) {
       console.error("Erro", error);
     }
@@ -52,6 +58,17 @@ export default function ConselheiroPage() {
     try {
       await updateDoc(doc(db, "entregas", entrega.id), { status: "rejeitada" });
       setEntregas(entregas.filter(e => e.id !== entrega.id));
+    } catch (error) {
+      console.error("Erro", error);
+    }
+  };
+
+  const revogarEntrega = async (entrega) => {
+    if (!window.confirm("Isso removerá o XP do usuário. Tem certeza?")) return;
+    try {
+      await updateDoc(doc(db, "entregas", entrega.id), { status: "rejeitada" });
+      await updateDoc(doc(db, "users", entrega.userId), { xp: increment(-entrega.xpRecompensa) });
+      setHistorico(historico.filter(e => e.id !== entrega.id));
     } catch (error) {
       console.error("Erro", error);
     }
@@ -92,25 +109,31 @@ export default function ConselheiroPage() {
         </div>
       </header>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <button 
           onClick={() => setActiveTab("entregas")}
-          style={{ flex: 1, padding: '10px', background: activeTab === "entregas" ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === "entregas" ? '#fff' : 'var(--text-muted)', border: activeTab === "entregas" ? '1px solid var(--danger)' : '1px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+          style={{ flex: 1, minWidth: '100px', padding: '10px 5px', fontSize: '0.85rem', background: activeTab === "entregas" ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === "entregas" ? '#fff' : 'var(--text-muted)', border: activeTab === "entregas" ? '1px solid var(--danger)' : '1px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
         >
           Validações
           {entregas.length > 0 && activeTab !== "entregas" && (
-            <span style={{ marginLeft: '8px', background: 'var(--danger)', color: '#fff', padding: '2px 6px', borderRadius: '50%', fontSize: '0.7rem' }}>{entregas.length}</span>
+            <span style={{ marginLeft: '4px', background: 'var(--danger)', color: '#fff', padding: '2px 6px', borderRadius: '50%', fontSize: '0.7rem' }}>{entregas.length}</span>
           )}
         </button>
         <button 
-          onClick={() => setActiveTab("forja")}
-          style={{ flex: 1, padding: '10px', background: activeTab === "forja" ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === "forja" ? '#fff' : 'var(--text-muted)', border: activeTab === "forja" ? '1px solid var(--accent-primary)' : '1px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+          onClick={() => setActiveTab("historico")}
+          style={{ flex: 1, minWidth: '100px', padding: '10px 5px', fontSize: '0.85rem', background: activeTab === "historico" ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === "historico" ? '#fff' : 'var(--text-muted)', border: activeTab === "historico" ? '1px solid var(--success)' : '1px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
         >
-          Forja de Missões
+          Aprovadas
+        </button>
+        <button 
+          onClick={() => setActiveTab("forja")}
+          style={{ flex: 1, minWidth: '100px', padding: '10px 5px', fontSize: '0.85rem', background: activeTab === "forja" ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === "forja" ? '#fff' : 'var(--text-muted)', border: activeTab === "forja" ? '1px solid var(--accent-primary)' : '1px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          Forja
         </button>
       </div>
 
-      {activeTab === "entregas" ? (
+      {activeTab === "entregas" && (
         <>
           {loadingEntregas ? (
             <div style={{ textAlign: 'center', marginTop: '40px', color: 'var(--text-muted)' }}>Verificando o sistema...</div>
@@ -159,7 +182,56 @@ export default function ConselheiroPage() {
             </div>
           )}
         </>
-      ) : (
+      )}
+
+      {activeTab === "historico" && (
+        <>
+          {loadingEntregas ? (
+            <div style={{ textAlign: 'center', marginTop: '40px', color: 'var(--text-muted)' }}>Buscando arquivos...</div>
+          ) : historico.length === 0 ? (
+            <div className="glass-card" style={{ padding: '40px 20px', textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Nenhum registro de aprovação encontrado.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {historico.map(entrega => (
+                <div key={entrega.id} className="glass-card" style={{ padding: '20px', borderLeft: '4px solid var(--success)', opacity: 0.8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '1.1rem', color: '#fff' }}>{entrega.userName}</strong>
+                    <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>{entrega.xpRecompensa} XP</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>
+                    Missão: <span style={{ color: '#fff' }}>{entrega.missaoTitulo}</span>
+                  </p>
+                  
+                  <div style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Prova da Conclusão:</span>
+                    <p style={{ color: '#e2e8f0', fontSize: '0.95rem', fontStyle: 'italic' }}>"{entrega.provaTexto || "Missão concluída!"}"</p>
+                  </div>
+
+                  {entrega.iaFeedback && (
+                    <div style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
+                      <span style={{ display: 'block', fontSize: '0.7rem', color: '#e9d5ff', textTransform: 'uppercase', marginBottom: '4px' }}>🔮 Veredito da Inteligência Mágica:</span>
+                      <p style={{ color: '#e9d5ff', fontSize: '0.85rem' }}>{entrega.iaFeedback}</p>
+                    </div>
+                  )}
+                  
+                  <button 
+                    className="btn-secondary" 
+                    style={{ width: '100%', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '8px', fontSize: '0.8rem' }} 
+                    onClick={() => revogarEntrega(entrega)}
+                  >
+                    <X size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }}/>
+                    REVOGAR APROVAÇÃO (-XP)
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === "forja" && (
         <div className="glass-card" style={{ padding: '24px' }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-primary)' }}>
             <Plus size={20} /> Criar Nova Missão

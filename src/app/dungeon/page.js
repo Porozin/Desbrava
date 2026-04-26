@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Skull } from "lucide-react";
 
 export default function DungeonPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, updateUserData } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState(0);
@@ -54,6 +54,7 @@ export default function DungeonPage() {
     try {
       let statusEntrega = "pendente";
       let alertMessage = "Sua sabedoria ecoou pela masmorra. O Mestre julgará sua resposta!";
+      let iaFeedback = null;
 
       // AI Validation for Dungeon
       const res = await fetch("/api/validate", {
@@ -67,11 +68,13 @@ export default function DungeonPage() {
 
       if (res.ok) {
         const data = await res.json();
+        iaFeedback = data.rawText;
         if (data.resultado === "APROVADO") {
           statusEntrega = "aprovada";
           alertMessage = "A Estátua Mágica brilhou! Sua resposta foi APROVADA automaticamente. +200 XP!";
-          // Add XP
+          // Add XP no banco e na tela
           await updateDoc(doc(db, "users", user.uid), { xp: increment(200) });
+          updateUserData({ xp: (user.xp || 0) + 200 });
         } else {
           statusEntrega = "pendente"; // Goes to human analysis
           alertMessage = "A Estátua silenciou. Os Mestres julgarão se suas palavras são dignas.";
@@ -86,6 +89,7 @@ export default function DungeonPage() {
         xpRecompensa: 200,
         provaTexto: respostaDungeon,
         status: statusEntrega,
+        iaFeedback: iaFeedback,
         data: serverTimestamp()
       });
       alert(alertMessage);
