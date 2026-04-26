@@ -113,25 +113,16 @@ export default function MissoesPage() {
 
   return (
     <div className="container animate-slide-up">
-      <header className="page-header">
+      <header className="page-header" style={{ marginBottom: '24px' }}>
         <button className="back-button" onClick={() => router.push("/dashboard")}>
           <ChevronLeft size={24} />
         </button>
         <div>
-          <h1 className="page-title" style={{ fontSize: '1.5rem' }}>Quadro de Missões</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Tarefas diárias disponíveis</p>
+          <h1 className="page-title" style={{ fontSize: '1.5rem', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text' }}>Mural da Guilda</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Missões Disponíveis</p>
         </div>
       </header>
 
-      {loadingMissoes ? (
-        <div style={{ textAlign: 'center', marginTop: '40px', color: 'var(--text-muted)' }}>Buscando missões no sistema...</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {missoes.map(missao => (
-            <div key={missao.id} className="glass-card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`badge ${missao.categoria === 'Espiritual' ? 'badge-blue' : missao.categoria === 'Física' ? 'badge-green' : 'badge-purple'}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
       {missaoAtiva && (
         <div className="glass-card" style={{ padding: '24px', marginBottom: '24px', border: '1px solid var(--accent-primary)', animation: 'slideUp 0.3s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
