@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/Porozin/Desbrava#readme",
   "dependencies": {
+    "@google/genai": "^1.50.1",
     "firebase": "^12.12.1",
     "lucide-react": "^1.11.0",
     "next": "^16.2.4",

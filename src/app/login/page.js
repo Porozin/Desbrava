@@ -24,6 +24,20 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
+  const handleMasterRegister = async () => {
+    setMasterError("");
+    if (!username || !password) {
+      setMasterError("Preencha email e senha para registrar.");
+      return;
+    }
+    try {
+      await registerCounselor(username, password);
+      // O useEffect vai capturar a mudança de auth e jogar pra /criacao
+    } catch (error) {
+      setMasterError("Falha ao registrar. O email já existe ou a senha é fraca.");
+    }
+  };
+
   const handleMasterLogin = async (e) => {
     e.preventDefault();
     setMasterError("");
@@ -102,8 +116,14 @@ export default function LoginPage() {
             />
             {masterError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>{masterError}</p>}
             
-            <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(135deg, var(--danger), #991b1b)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}>
-              AUTENTICAR
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="submit" className="btn-primary" style={{ flex: 1, background: 'linear-gradient(135deg, var(--danger), #991b1b)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}>
+                AUTENTICAR
+              </button>
+            </div>
+
+            <button type="button" onClick={handleMasterRegister} style={{ background: 'none', border: '1px solid rgba(239, 68, 68, 0.5)', color: 'var(--danger)', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+              Não possui conta? Registrar Mestre
             </button>
 
             <button type="button" onClick={() => setShowMasterLogin(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', cursor: 'pointer', marginTop: '10px' }}>

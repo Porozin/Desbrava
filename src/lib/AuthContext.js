@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "./firebase";
-import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, signOut, GoogleAuthProvider } from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext({});
@@ -69,6 +69,10 @@ export const AuthProvider = ({ children }) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const registerCounselor = async (email, password) => {
+    await createUserWithEmailAndPassword(auth, email, password);
+  };
+
   const loginAsAdmin = (username, password) => {
     if (username === "admin" && password === "lunna") {
       localStorage.setItem("admin_session", "true");
@@ -102,7 +106,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loginWithGoogle, loginCounselor, loginAsAdmin, logout, loading, updateUserData }}>
+    <AuthContext.Provider value={{ user, loginWithGoogle, loginCounselor, registerCounselor, loginAsAdmin, logout, loading, updateUserData }}>
       {children}
     </AuthContext.Provider>
   );

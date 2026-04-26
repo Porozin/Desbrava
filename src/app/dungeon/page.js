@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Skull } from "lucide-react";
 
@@ -52,22 +52,48 @@ export default function DungeonPage() {
     setEnviando(true);
 
     try {
+      let statusEntrega = "pendente";
+      let alertMessage = "Sua sabedoria ecoou pela masmorra. O Mestre julgará sua resposta!";
+
+      // AI Validation for Dungeon
+      const res = await fetch("/api/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          missaoDescricao: "Responder qual é o maior mandamento da lei (Amar a Deus sobre todas as coisas e ao próximo como a si mesmo).",
+          provaTexto: respostaDungeon
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.resultado === "APROVADO") {
+          statusEntrega = "aprovada";
+          alertMessage = "A Estátua Mágica brilhou! Sua resposta foi APROVADA automaticamente. +200 XP!";
+          // Add XP
+          await updateDoc(doc(db, "users", user.uid), { xp: increment(200) });
+        } else {
+          statusEntrega = "pendente"; // Goes to human analysis
+          alertMessage = "A Estátua silenciou. Os Mestres julgarão se suas palavras são dignas.";
+        }
+      }
+
       await addDoc(collection(db, "entregas"), {
         userId: user.uid,
         userName: user.displayName,
         missaoId: "dungeon_semanal",
         missaoTitulo: "Masmorra Semanal: A Caverna do Desespero",
-        xpRecompensa: 200, // Recompensa massiva
+        xpRecompensa: 200,
         provaTexto: respostaDungeon,
-        status: "pendente",
+        status: statusEntrega,
         data: serverTimestamp()
       });
-      alert("Sua sabedoria ecoou pela masmorra. O Mestre julgará sua resposta!");
+      alert(alertMessage);
       router.push("/dashboard");
     } catch (error) {
       alert("Falha na magia de comunicação.");
-      setEnviando(false);
     }
+    setEnviando(false);
   };
 
   if (loading || !user) return null;

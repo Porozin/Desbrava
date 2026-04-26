@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
-import { collection, getDocs, addDoc, serverTimestamp, query } from "firebase/firestore";
+import { collection, getDocs, addDoc, serverTimestamp, query, doc, updateDoc, increment } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ScrollText, Swords, ShieldPlus, Brain } from "lucide-react";
 
@@ -48,6 +48,34 @@ export default function MissoesPage() {
     setEnviando(true);
 
     try {
+      let statusEntrega = "pendente";
+      let alertMessage = `O relatório da missão "${missaoAtiva.titulo}" foi enviado aos mestres!`;
+
+      // Se a missão tiver IA ativada
+      if (missaoAtiva.usarIA) {
+        const res = await fetch("/api/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            missaoDescricao: missaoAtiva.descricao,
+            provaTexto: provaTexto
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.resultado === "APROVADO") {
+            statusEntrega = "aprovada";
+            alertMessage = `A Inteligência Mágica APROVOU sua missão instantaneamente! +${missaoAtiva.xp} XP!`;
+            // Atualiza XP do usuário na hora
+            await updateDoc(doc(db, "users", user.uid), { xp: increment(missaoAtiva.xp) });
+          } else {
+            statusEntrega = "pendente"; // Rejeitado pela IA vai para análise humana
+            alertMessage = "A IA não se convenceu. Seu relatório foi enviado para análise humana dos Mestres.";
+          }
+        }
+      }
+
       await addDoc(collection(db, "entregas"), {
         userId: user.uid,
         userName: user.displayName,
@@ -55,13 +83,15 @@ export default function MissoesPage() {
         missaoTitulo: missaoAtiva.titulo,
         xpRecompensa: missaoAtiva.xp,
         provaTexto: provaTexto,
-        status: "pendente",
+        status: statusEntrega,
         data: serverTimestamp()
       });
-      alert(`O relatório da missão "${missaoAtiva.titulo}" foi enviado aos mestres!`);
+      
+      alert(alertMessage);
       setMissaoAtiva(null);
       setProvaTexto("");
     } catch (error) {
+      console.error(error);
       alert("Falha na comunicação com o sistema.");
     }
     setEnviando(false);

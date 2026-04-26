@@ -16,7 +16,7 @@ export default function ConselheiroPage() {
   const [loadingEntregas, setLoadingEntregas] = useState(true);
 
   // Estados do formulário de criação
-  const [novaMissao, setNovaMissao] = useState({ titulo: "", descricao: "", xp: 10, categoria: "Espiritual" });
+  const [novaMissao, setNovaMissao] = useState({ titulo: "", descricao: "", xp: 10, categoria: "Espiritual", usarIA: false });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -66,10 +66,11 @@ export default function ConselheiroPage() {
         descricao: novaMissao.descricao,
         xp: Number(novaMissao.xp),
         categoria: novaMissao.categoria,
+        usarIA: novaMissao.usarIA,
         dataCriacao: serverTimestamp()
       });
       alert("Nova missão forjada com sucesso!");
-      setNovaMissao({ titulo: "", descricao: "", xp: 10, categoria: "Espiritual" });
+      setNovaMissao({ titulo: "", descricao: "", xp: 10, categoria: "Espiritual", usarIA: false });
       setActiveTab("entregas");
     } catch (error) {
       alert("Erro ao forjar missão.");
@@ -205,6 +206,16 @@ export default function ConselheiroPage() {
                 style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none', resize: 'vertical' }}
               />
             </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'rgba(139, 92, 246, 0.1)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+              <input 
+                type="checkbox" 
+                checked={novaMissao.usarIA} 
+                onChange={e => setNovaMissao({...novaMissao, usarIA: e.target.checked})}
+                style={{ width: '20px', height: '20px', accentColor: 'var(--accent-purple)' }}
+              />
+              <span style={{ color: '#e9d5ff', fontWeight: 'bold' }}>🔮 Validação Mágica (IA)</span>
+            </label>
 
             <button type="submit" className="btn-primary" disabled={isSaving} style={{ marginTop: '10px' }}>
               {isSaving ? "FORJANDO..." : "FORJAR MISSÃO"}
