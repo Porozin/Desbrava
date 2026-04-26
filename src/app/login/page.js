@@ -34,7 +34,8 @@ export default function LoginPage() {
       await registerCounselor(username, password);
       // O useEffect vai capturar a mudança de auth e jogar pra /criacao
     } catch (error) {
-      setMasterError("Falha ao registrar. O email já existe ou a senha é fraca.");
+      console.error(error);
+      setMasterError("Erro do Firebase: " + error.message);
     }
   };
 
@@ -51,7 +52,8 @@ export default function LoginPage() {
     try {
       await loginCounselor(username, password);
     } catch (error) {
-      setMasterError("Credenciais inválidas. O sistema recusa sua entrada.");
+      console.error(error);
+      setMasterError("Erro do Firebase: " + error.message);
     }
   };
 
