@@ -3,7 +3,7 @@
 import { useAuth } from "../../lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { LogOut, Map, Trophy, ShieldAlert, Zap } from "lucide-react";
+import { LogOut, Map, Trophy, ShieldAlert, Zap, Users } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, logout, loading } = useAuth();
@@ -63,10 +63,16 @@ export default function DashboardPage() {
           QUADRO DE MISSÕES
         </button>
         
-        <button className="btn-secondary" onClick={() => router.push("/ranking")}>
-          <Trophy size={20} color="var(--warning)" />
-          HALL DA FAMA
-        </button>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button className="btn-secondary" style={{ flex: 1 }} onClick={() => router.push("/ranking")}>
+            <Trophy size={20} color="var(--warning)" />
+            RANKING
+          </button>
+          <button className="btn-secondary" style={{ flex: 1 }} onClick={() => router.push("/unidades")}>
+            <Users size={20} color="#a78bfa" />
+            UNIDADES
+          </button>
+        </div>
 
         {user.role === 'admin' && (
           <button className="btn-secondary" style={{ borderColor: 'rgba(245, 158, 11, 0.3)', color: 'var(--warning)' }} onClick={() => router.push("/conselheiro")}>
