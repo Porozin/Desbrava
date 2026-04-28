@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
-import { collection, getDocs, addDoc, serverTimestamp, query, doc, updateDoc, increment } from "firebase/firestore";
+import { collection, getDocs, addDoc, serverTimestamp, query, doc, updateDoc, increment, where } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ScrollText, Swords, ShieldPlus, Brain } from "lucide-react";
