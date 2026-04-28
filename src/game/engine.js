@@ -1,6 +1,9 @@
-import Crafty from "craftyjs";
+// window.Crafty will be available from CDN
 
 export const initGame = (element, user) => {
+  const Crafty = window.Crafty;
+  if (!Crafty) return null;
+  
   // Configurações Iniciais
   const width = element.clientWidth;
   const height = element.clientHeight;
