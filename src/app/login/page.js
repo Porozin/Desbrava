@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation";
 import { Shield, Sparkles, KeyRound } from "lucide-react";
 
 export default function LoginPage() {
-  const { user, loginWithGoogle, loginCounselor, loginAsAdmin, registerCounselor, loading } = useAuth();
+  const { user, loginWithGoogle, loginCounselor, loginAsAdmin, registerUser, loading } = useAuth();
   const router = useRouter();
 
   const [showMasterLogin, setShowMasterLogin] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [masterError, setMasterError] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -24,36 +26,38 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const handleMasterRegister = async () => {
-    setMasterError("");
+  const handleEmailAuth = async (e) => {
+    e.preventDefault();
+    setError("");
     if (!username || !password) {
-      setMasterError("Preencha email e senha para registrar.");
+      setError("Preencha todos os campos.");
       return;
     }
     try {
-      await registerCounselor(username, password);
-      // O useEffect vai capturar a mudança de auth e jogar pra /criacao
+      if (isRegistering) {
+        await registerUser(username, password);
+      } else {
+        await loginCounselor(username, password);
+      }
     } catch (error) {
       console.error(error);
-      setMasterError("Erro do Firebase: " + error.message);
+      setError(error.message.includes("auth/user-not-found") ? "Usuário não encontrado." : "Erro na autenticação.");
     }
   };
 
   const handleMasterLogin = async (e) => {
     e.preventDefault();
-    setMasterError("");
+    setError("");
     
-    // Check if it's the hardcoded admin
     if (loginAsAdmin(username, password)) {
-      return; // Will redirect via useEffect
+      return;
     }
     
-    // Check if it's a counselor (Email/Password Firebase)
     try {
       await loginCounselor(username, password);
     } catch (error) {
       console.error(error);
-      setMasterError("Erro do Firebase: " + error.message);
+      setError("Falha no acesso mestre.");
     }
   };
 
@@ -89,47 +93,75 @@ export default function LoginPage() {
           {showMasterLogin ? "ACESSO RESTRITO" : "DESPERTAR DO AVENTUREIRO"}
         </p>
         
-        {!showMasterLogin ? (
+        {!showMasterLogin && !showEmailLogin ? (
           <>
-            <button className="btn-primary" onClick={loginWithGoogle} style={{ width: '100%', marginBottom: '20px' }}>
+            <button className="btn-primary" onClick={loginWithGoogle} style={{ width: '100%', marginBottom: '12px' }}>
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '20px', background: '#fff', borderRadius: '50%', padding: '2px' }}/>
-              INICIAR SESSÃO
+              ENTRAR COM GOOGLE
+            </button>
+
+            <button className="btn-secondary" onClick={() => setShowEmailLogin(true)} style={{ width: '100%', marginBottom: '24px' }}>
+              USAR EMAIL E SENHA
             </button>
 
             <button onClick={() => setShowMasterLogin(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>
-              Entrar como Mestre do Sistema
+              Acesso Restrito do Mestre
             </button>
           </>
-        ) : (
-          <form onSubmit={handleMasterLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        ) : showEmailLogin ? (
+          <form onSubmit={handleEmailAuth} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input 
-              type="text" 
-              placeholder="Email ou Admin" 
+              type="email" 
+              placeholder="Seu Email" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               style={{ width: '100%', padding: '14px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', outline: 'none' }}
             />
             <input 
               type="password" 
-              placeholder="Senha" 
+              placeholder="Sua Senha" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={{ width: '100%', padding: '14px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', outline: 'none' }}
             />
-            {masterError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>{masterError}</p>}
+            {error && <p style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>{error}</p>}
             
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="submit" className="btn-primary" style={{ flex: 1, background: 'linear-gradient(135deg, var(--danger), #991b1b)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}>
-                AUTENTICAR
-              </button>
-            </div>
+            <button type="submit" className="btn-primary" style={{ width: '100%' }}>
+              {isRegistering ? "CRIAR CONTA" : "ENTRAR"}
+            </button>
 
-            <button type="button" onClick={handleMasterRegister} style={{ background: 'none', border: '1px solid rgba(239, 68, 68, 0.5)', color: 'var(--danger)', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s' }}>
-              Não possui conta? Registrar Mestre
+            <button type="button" onClick={() => setIsRegistering(!isRegistering)} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem', cursor: 'pointer' }}>
+              {isRegistering ? "Já tem conta? Login" : "Novo aqui? Criar conta"}
+            </button>
+
+            <button type="button" onClick={() => setShowEmailLogin(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', cursor: 'pointer', marginTop: '10px' }}>
+              Voltar
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleMasterLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <input 
+              type="text" 
+              placeholder="Admin ID" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{ width: '100%', padding: '14px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', outline: 'none' }}
+            />
+            <input 
+              type="password" 
+              placeholder="Chave de Acesso" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ width: '100%', padding: '14px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', outline: 'none' }}
+            />
+            {error && <p style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>{error}</p>}
+            
+            <button type="submit" className="btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, var(--danger), #991b1b)' }}>
+              AUTENTICAR MESTRE
             </button>
 
             <button type="button" onClick={() => setShowMasterLogin(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', cursor: 'pointer', marginTop: '10px' }}>
-              Voltar para login de caçador
+              Voltar
             </button>
           </form>
         )}

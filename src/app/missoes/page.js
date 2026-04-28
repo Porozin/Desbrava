@@ -25,9 +25,18 @@ export default function MissoesPage() {
 
   const fetchMissoes = async () => {
     try {
-      const q = query(collection(db, "missoes"));
+      const q = query(collection(db, "missoes"), where("arquivada", "==", false));
       const querySnapshot = await getDocs(q);
-      const fetchedMissoes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let fetchedMissoes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Fallback for missions without the arquivada field (backwards compatibility)
+      if (fetchedMissoes.length === 0) {
+        const allQ = query(collection(db, "missoes"));
+        const allSnapshot = await getDocs(allQ);
+        fetchedMissoes = allSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(m => m.arquivada !== true);
+      }
       
       if (fetchedMissoes.length === 0) {
         setMissoes([

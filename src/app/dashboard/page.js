@@ -3,7 +3,7 @@
 import { useAuth } from "../../lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogOut, Map, Trophy, ShieldAlert, Zap, Users, Skull } from "lucide-react";
+import { LogOut, Map, Trophy, ShieldAlert, Zap, Users, Skull, Coins } from "lucide-react";
 import toast from "react-hot-toast";
 import { db } from "../../lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
@@ -59,11 +59,17 @@ export default function DashboardPage() {
             {user.displayName?.split(' ')[0] || "CAÇADOR"}
             {user.vocacao && <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', color: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', letterSpacing: 'normal' }}>{user.vocacao}</span>}
           </h1>
-          {user.role === 'admin' && (
-            <span style={{ display: 'inline-block', background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.4)', marginTop: '4px' }}>
-              Mestre Conselheiro
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(251, 191, 36, 0.1)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+              <Coins size={14} color="#fbbf24" />
+              <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fbbf24' }}>{user.coins || 0}</span>
+            </div>
+            {user.role === 'admin' && (
+              <span style={{ display: 'inline-block', background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+                Mestre Conselheiro
+              </span>
+            )}
+          </div>
         </div>
         <div style={{ position: 'relative' }}>
           <div style={{ width: '56px', height: '56px', borderRadius: '14px', border: '2px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', background: 'rgba(255,255,255,0.05)' }}>
@@ -179,6 +185,10 @@ export default function DashboardPage() {
           <button className="btn-primary" style={{ flex: 1, padding: '14px 10px', fontSize: '0.9rem', background: 'linear-gradient(135deg, #7e22ce, #db2777)' }} onClick={() => router.push("/dungeon")}>
             <Skull size={18} />
             MASMORRA
+          </button>
+          <button className="btn-primary" style={{ flex: 1, padding: '14px 10px', fontSize: '0.9rem', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' }} onClick={() => router.push("/loja")}>
+            <Coins size={18} />
+            LOJA
           </button>
         </div>
         

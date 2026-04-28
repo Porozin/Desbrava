@@ -16,16 +16,17 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Checagem do Admin Hardcoded
     if (typeof window !== 'undefined' && localStorage.getItem("admin_session") === "true") {
-      setUser({ 
-        uid: "admin-hardcoded", 
-        displayName: "Mestre Supremo", 
-        role: "admin", 
-        status: "active", 
-        xp: 9999, 
-        level: 99,
-        unidade: "Administração", 
-        photoURL: "https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff" 
-      });
+       setUser({ 
+         uid: "admin-hardcoded", 
+         displayName: "Mestre Supremo", 
+         role: "admin", 
+         status: "active", 
+         xp: 9999, 
+         level: 99,
+         unidade: "Administração", 
+         coins: 0,
+         photoURL: "https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff" 
+       });
       setLoading(false);
       return;
     }
@@ -47,8 +48,9 @@ export const AuthProvider = ({ children }) => {
           const isPasswordUser = currentUser.providerData.some(p => p.providerId === 'password');
           
           userData.status = "pending_creation";
-          userData.role = isPasswordUser ? "admin" : "desbravador";
+          userData.role = "desbravador";
           userData.xp = 0;
+          userData.coins = 0;
           userData.level = 1;
           
           await setDoc(userDocRef, userData);
@@ -71,7 +73,7 @@ export const AuthProvider = ({ children }) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const registerCounselor = async (email, password) => {
+  const registerUser = async (email, password) => {
     await createUserWithEmailAndPassword(auth, email, password);
   };
 
@@ -108,7 +110,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loginWithGoogle, loginCounselor, registerCounselor, loginAsAdmin, logout, loading, updateUserData }}>
+    <AuthContext.Provider value={{ user, loginWithGoogle, loginCounselor, registerUser, loginAsAdmin, logout, loading, updateUserData }}>
       {children}
     </AuthContext.Provider>
   );

@@ -26,7 +26,11 @@ export default function RankingPage() {
   const fetchRanking = async () => {
     try {
       // Puxar todos que não são admin
-      const q = query(collection(db, "users"), where("role", "==", "desbravador"));
+      const q = query(
+        collection(db, "users"), 
+        where("role", "==", "desbravador"),
+        where("status", "==", "active")
+      );
       const snapshot = await getDocs(q);
       
       let fetchedHunters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
