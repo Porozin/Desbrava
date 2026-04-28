@@ -22,7 +22,14 @@ export const initGame = (element, user, onFinish) => {
     },
     currentEnemy: null,
     dungeonProgress: 0,
-    maxProgress: 5
+    maxProgress: 5,
+    backgrounds: [
+      "radial-gradient(circle at center, #1e293b, #020617)",
+      "radial-gradient(circle at center, #0f172a, #000000)",
+      "radial-gradient(circle at center, #1e1b4b, #020617)",
+      "radial-gradient(circle at center, #312e81, #020617)",
+      "radial-gradient(circle at center, #4c1d95, #020617)"
+    ]
   };
 
   // --- COMPONENTES ---
@@ -32,7 +39,6 @@ export const initGame = (element, user, onFinish) => {
       this.addComponent("2D, DOM, Color, Text, Mouse");
       this.attr({ w: Math.min(width * 0.8, 300), h: 54 });
       this.color("rgba(255, 255, 255, 0.05)");
-      this.textColor("#fff");
       this.css({ 
         "border": "1px solid rgba(255,255,255,0.15)", 
         "border-radius": "16px", 
@@ -47,8 +53,10 @@ export const initGame = (element, user, onFinish) => {
         "letter-spacing": "0.05em",
         "backdrop-filter": "blur(8px)",
         "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-        "box-shadow": "0 4px 12px rgba(0,0,0,0.2)"
+        "box-shadow": "0 4px 12px rgba(0,0,0,0.2)",
+        "color": "#ffffff !important" 
       });
+      this.textColor("#ffffff");
       this.bind("MouseOver", () => {
         this.color("rgba(255, 255, 255, 0.12)");
         this.css({ "border-color": "rgba(255,255,255,0.3)" });
@@ -64,11 +72,11 @@ export const initGame = (element, user, onFinish) => {
     },
     variant: function(type) {
       if (type === "primary") {
-        this.css({ "background": "linear-gradient(135deg, #3b82f6, #2563eb)", "border": "none", "color": "#fff" });
+        this.css({ "background": "linear-gradient(135deg, #3b82f6, #2563eb)", "border": "none", "color": "#ffffff !important" });
       } else if (type === "danger") {
-        this.css({ "background": "linear-gradient(135deg, #ef4444, #dc2626)", "border": "none", "color": "#fff" });
+        this.css({ "background": "linear-gradient(135deg, #ef4444, #dc2626)", "border": "none", "color": "#ffffff !important" });
       } else if (type === "warning") {
-        this.css({ "background": "linear-gradient(135deg, #f59e0b, #d97706)", "border": "none", "color": "#fff" });
+        this.css({ "background": "linear-gradient(135deg, #f59e0b, #d97706)", "border": "none", "color": "#ffffff !important" });
       }
       return this;
     }
@@ -79,20 +87,15 @@ export const initGame = (element, user, onFinish) => {
     init: function() {
       this.addComponent("2D, DOM, Text");
       this.textFont({ size: '64px' });
-      this.css({ "display": "flex", "align-items": "center", "justify-content": "center" });
+      this.css({ "display": "flex", "align-items": "center", "justify-content": "center", "transition": "transform 0.1s" });
     },
     setEmoji: function(e) {
       this.text(e);
       return this;
     },
-    shake: function() {
-      const originalX = this.x;
-      this.bind("EnterFrame", function(frame) {
-        if (frame.frame % 2 === 0) {
-          this.x = originalX + (Math.random() * 10 - 5);
-        }
-        if (frame.frame > 30) this.unbind("EnterFrame");
-      });
+    hit: function() {
+      this.css({ "transform": "scale(1.2) rotate(5deg)" });
+      setTimeout(() => this.css({ "transform": "scale(1) rotate(0deg)" }), 100);
     }
   });
 
@@ -112,17 +115,18 @@ export const initGame = (element, user, onFinish) => {
   });
 
   Crafty.scene("Exploration", function() {
-    Crafty.background("radial-gradient(circle at center, #1e293b, #020617)");
+    Crafty.background(gameState.backgrounds[gameState.dungeonProgress % gameState.backgrounds.length]);
     
     // Header Info
     const topBar = Crafty.e("2D, DOM, Color")
       .attr({ x: 0, y: 0, w: width, h: 60 })
-      .color("rgba(0,0,0,0.3)");
+      .color("rgba(0,0,0,0.4)")
+      .css({ "border-bottom": "1px solid rgba(255,255,255,0.1)" });
 
     Crafty.e("2D, DOM, Text")
       .attr({ x: 20, y: 22, w: width - 40 })
       .text(`PROGRESSO: ${gameState.dungeonProgress}/${gameState.maxProgress}`)
-      .textColor("rgba(255,255,255,0.5)")
+      .textColor("rgba(255,255,255,0.6)")
       .textFont({ size: '11px', weight: '800' });
 
     if (gameState.dungeonProgress >= gameState.maxProgress) {
@@ -175,7 +179,7 @@ export const initGame = (element, user, onFinish) => {
   });
 
   Crafty.scene("Combat", function() {
-    Crafty.background("linear-gradient(to bottom, #1e1b4b, #020617)");
+    Crafty.background(gameState.backgrounds[gameState.dungeonProgress % gameState.backgrounds.length]);
     
     const monsterEmojis = ["👺", "🐺", "🕷️", "💀", "👻"];
     const enemy = {
@@ -259,8 +263,7 @@ export const initGame = (element, user, onFinish) => {
       if (type === "attack") {
         enemy.hp -= gameState.player.atk;
         logText.text(`Você golpeou causando ${gameState.player.atk} dano!`);
-        enemyEntity.css({ "transform": "translateX(10px)" });
-        setTimeout(() => enemyEntity.css({ "transform": "translateX(0)" }), 100);
+        enemyEntity.hit();
       }
       checkEnd();
     };
@@ -330,6 +333,7 @@ export const initGame = (element, user, onFinish) => {
         const damage = Math.floor(enemy.atk * (0.8 + Math.random() * 0.4));
         gameState.player.hp -= damage;
         updateBars();
+        playerEntity.hit();
         logText.text(`${enemy.name} revidou com ${damage} de dano!`);
         logText.textColor("#fff");
         if (gameState.player.hp <= 0) gameOver();
