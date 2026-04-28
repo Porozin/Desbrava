@@ -28,24 +28,16 @@ export default function MissoesPage() {
       const q = query(collection(db, "missoes"), where("arquivada", "==", false));
       const querySnapshot = await getDocs(q);
       let fetchedMissoes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Fallback for missions without the arquivada field (backwards compatibility)
+
+      // Compatibilidade: missões antigas sem o campo "arquivada"
       if (fetchedMissoes.length === 0) {
-        const allQ = query(collection(db, "missoes"));
-        const allSnapshot = await getDocs(allQ);
+        const allSnapshot = await getDocs(collection(db, "missoes"));
         fetchedMissoes = allSnapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(m => m.arquivada !== true);
       }
-      
-      if (fetchedMissoes.length === 0) {
-        setMissoes([
-          { id: "1", titulo: "Ler Provérbios 1", descricao: "Leia o primeiro capítulo e faça um resumo da sabedoria encontrada.", xp: 50, categoria: "Espiritual" },
-          { id: "2", titulo: "15 min de Exercício", descricao: "Fortaleça seu corpo físico para as batalhas que virão.", xp: 30, categoria: "Física" },
-        ]);
-      } else {
-        setMissoes(fetchedMissoes);
-      }
+
+      setMissoes(fetchedMissoes);
     } catch (error) {
       console.error("Erro ao buscar missões", error);
     }
@@ -166,6 +158,12 @@ export default function MissoesPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {loadingMissoes ? (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>Procurando pergaminhos...</div>
+        ) : missoes.length === 0 ? (
+          <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '3rem' }}>📋</span>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 600 }}>Nenhuma missão disponível</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', opacity: 0.6 }}>Aguarde o Mestre criar novas missões no Painel.</p>
+          </div>
         ) : (
           missoes.map(missao => (
             <div key={missao.id} className="glass-card" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
