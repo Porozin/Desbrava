@@ -2,13 +2,15 @@
 
 import { useAuth } from "../../lib/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import GameContainer from "../../game/GameContainer";
 import { ChevronLeft } from "lucide-react";
+import Script from "next/script";
 
 export default function DungeonPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [craftyLoaded, setCraftyLoaded] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -20,6 +22,11 @@ export default function DungeonPage() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', overflow: 'hidden' }}>
+      <Script 
+        src="https://cdn.jsdelivr.net/gh/craftyjs/Crafty@release/dist/crafty-min.js" 
+        onLoad={() => setCraftyLoaded(true)}
+      />
+
       {/* HUD de Saída (Overlay) */}
       <button 
         onClick={() => {
@@ -47,7 +54,13 @@ export default function DungeonPage() {
         ABANDONAR
       </button>
 
-      <GameContainer user={user} />
+      {craftyLoaded ? (
+        <GameContainer user={user} />
+      ) : (
+        <div style={{ color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          Invocando a Masmorra...
+        </div>
+      )}
     </div>
   );
 }
