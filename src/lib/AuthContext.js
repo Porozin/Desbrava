@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 const AuthContext = createContext({});
 
@@ -31,37 +31,38 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    let unsubscribeDoc = () => {};
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      unsubscribeDoc(); // Limpa o listener anterior se existir
+
       if (currentUser) {
         const userDocRef = doc(db, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
         
-        let userData = {
-          uid: currentUser.uid,
-          email: currentUser.email,
-        };
-
-        if (userDoc.exists()) {
-          userData = { ...userData, ...userDoc.data() };
-        } else {
-          // Documento novo, status "pending_creation"
-          const isPasswordUser = currentUser.providerData.some(p => p.providerId === 'password');
-          
-          userData.status = "pending_creation";
-          userData.role = "desbravador";
-          userData.xp = 0;
-          userData.coins = 0;
-          userData.level = 1;
-          
-          await setDoc(userDocRef, userData);
-        }
-        setUser(userData);
+        unsubscribeDoc = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setUser({ uid: currentUser.uid, email: currentUser.email, ...docSnap.data() });
+          } else {
+            const userData = {
+              uid: currentUser.uid, email: currentUser.email,
+              status: "pending_creation", role: "desbravador",
+              xp: 0, coins: 0, level: 1
+            };
+            setDoc(userDocRef, userData);
+            setUser(userData);
+          }
+          setLoading(false);
+        });
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeDoc();
+    };
   }, []);
 
   const loginWithGoogle = async () => {

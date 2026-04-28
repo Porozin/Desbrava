@@ -45,7 +45,12 @@ export default function UnidadesPage() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
           {list.map(m => (
-            <div key={m.id} className="glass-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+            <div 
+              key={m.id} 
+              className="glass-card" 
+              style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center', cursor: 'pointer' }}
+              onClick={() => router.push(`/perfil?uid=${m.id}`)}
+            >
               <div style={{ fontSize: '2rem', background: 'rgba(255,255,255,0.05)', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
                 {m.photoURL && m.photoURL.length <= 4 ? m.photoURL : "🛡️"}
               </div>

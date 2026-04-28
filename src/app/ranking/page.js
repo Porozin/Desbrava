@@ -121,7 +121,12 @@ export default function RankingPage() {
             }
 
             return (
-              <div key={hunter.id} className="glass-card" style={{ padding: '16px', background: bgColor, border: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div 
+                key={hunter.id} 
+                className="glass-card" 
+                style={{ padding: '16px', background: bgColor, border: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}
+                onClick={() => router.push(`/perfil?uid=${hunter.id}`)}
+              >
                 <div style={{ width: '30px', display: 'flex', justifyContent: 'center' }}>
                   {icon}
                 </div>

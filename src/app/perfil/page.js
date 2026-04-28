@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "../../lib/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { db } from "../../lib/firebase";
-import { doc, updateDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { doc, updateDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, getDoc } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { ChevronLeft, Edit3, Save, X, Sword, Shield, BookOpen, Clock, Star, Package, Scroll } from "lucide-react";
 
@@ -44,11 +44,20 @@ function StatBar({ label, value, max = 100, color }) {
 
 // --- TABS ---
 
-function GuerreiroTab({ user, onSave }) {
+function GuerreiroTab({ user, onSave, isOwnProfile }) {
   const [editing, setEditing] = useState(false);
   const [avatar, setAvatar] = useState(user.photoURL || "🛡️");
   const [titulo, setTitulo] = useState(user.titulo || "Sem Título");
   const [bio, setBio] = useState(user.bio || "");
+
+  // Sincroniza estado local com dados do banco quando não estiver editando
+  useEffect(() => {
+    if (!editing) {
+      setAvatar(user.photoURL || "🛡️");
+      setTitulo(user.titulo || "Sem Título");
+      setBio(user.bio || "");
+    }
+  }, [user, editing]);
 
   const xp = user.xp || 0;
   const level = Math.floor(xp / 100) + 1;
@@ -64,9 +73,11 @@ function GuerreiroTab({ user, onSave }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Hero Card */}
       <div className="glass-card" style={{ padding: 24, textAlign: "center", position: "relative" }}>
-        <button onClick={() => setEditing(!editing)} style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", width: 36, height: 36, borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {editing ? <X size={16}/> : <Edit3 size={16}/>}
-        </button>
+        {isOwnProfile && (
+          <button onClick={() => setEditing(!editing)} style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", width: 36, height: 36, borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {editing ? <X size={16}/> : <Edit3 size={16}/>}
+          </button>
+        )}
 
         {/* Avatar */}
         <div style={{ fontSize: 72, lineHeight: 1, marginBottom: 8, filter: "drop-shadow(0 0 20px rgba(99,102,241,0.4))" }}>
@@ -134,24 +145,24 @@ function GuerreiroTab({ user, onSave }) {
   );
 }
 
-function InventarioTab({ user }) {
+function InventarioTab({ userId, userCoins }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "compras"), where("uid", "==", user.uid));
+    const q = query(collection(db, "compras"), where("uid", "==", userId));
     getDocs(q).then(snap => {
       setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
     });
-  }, [user.uid]);
+  }, [userId]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div className="glass-card" style={{ padding: 16 }}>
         <div style={{ display: "flex", gap: 16 }}>
           <div style={{ textAlign: "center", flex: 1 }}>
-            <p style={{ color: "#fbbf24", fontSize: 22, fontWeight: 900 }}>{user.coins || 0}</p>
+            <p style={{ color: "#fbbf24", fontSize: 22, fontWeight: 900 }}>{userCoins || 0}</p>
             <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>DesbravaCoins</p>
           </div>
           <div style={{ textAlign: "center", flex: 1 }}>
@@ -182,12 +193,12 @@ function InventarioTab({ user }) {
   );
 }
 
-function HistoricoTab({ user }) {
+function HistoricoTab({ userId }) {
   const [entregas, setEntregas] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "entregas"), where("uid", "==", user.uid));
+    const q = query(collection(db, "entregas"), where("uid", "==", userId));
     const unsub = onSnapshot(q, snap => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a,b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0));
@@ -195,7 +206,7 @@ function HistoricoTab({ user }) {
       setLoading(false);
     });
     return () => unsub();
-  }, [user.uid]);
+  }, [userId]);
 
   const statusStyle = { pendente: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" }, aprovada: { color: "#10b981", bg: "rgba(16,185,129,0.1)" }, rejeitada: { color: "#ef4444", bg: "rgba(239,68,68,0.1)" } };
 
@@ -238,14 +249,14 @@ function HistoricoTab({ user }) {
   );
 }
 
-function DiarioTab({ user }) {
+function DiarioTab({ userId, userName, isOwnProfile }) {
   const [entries, setEntries] = useState([]);
   const [newEntry, setNewEntry] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, "diario"), where("uid", "==", user.uid));
+    const q = query(collection(db, "diario"), where("uid", "==", userId));
     const unsub = onSnapshot(q, snap => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a,b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0));
@@ -253,15 +264,15 @@ function DiarioTab({ user }) {
       setLoading(false);
     });
     return () => unsub();
-  }, [user.uid]);
+  }, [userId]);
 
   const addEntry = async () => {
     if (!newEntry.trim()) return;
     setSaving(true);
     try {
       await addDoc(collection(db, "diario"), {
-        uid: user.uid, texto: newEntry.trim(),
-        criadoEm: serverTimestamp(), autor: user.displayName
+        uid: userId, texto: newEntry.trim(),
+        criadoEm: serverTimestamp(), autor: userName
       });
       setNewEntry("");
       toast.success("Entrada adicionada ao diário!");
@@ -274,26 +285,28 @@ function DiarioTab({ user }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Nova entrada */}
-      <div className="glass-card" style={{ padding: 16 }}>
-        <h3 style={{ color: "#fff", fontSize: 13, fontWeight: 800, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}><BookOpen size={14} color="#8b5cf6"/> Nova Entrada</h3>
-        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-          {moodEmojis.map(e => (
-            <button key={e} onClick={() => setNewEntry(prev => prev + e)} style={{ fontSize: 18, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 36, height: 36, cursor: "pointer" }}>{e}</button>
-          ))}
+      {isOwnProfile && (
+        <div className="glass-card" style={{ padding: 16 }}>
+          <h3 style={{ color: "#fff", fontSize: 13, fontWeight: 800, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}><BookOpen size={14} color="#8b5cf6"/> Nova Entrada</h3>
+          <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+            {moodEmojis.map(e => (
+              <button key={e} onClick={() => setNewEntry(prev => prev + e)} style={{ fontSize: 18, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 36, height: 36, cursor: "pointer" }}>{e}</button>
+            ))}
+          </div>
+          <textarea
+            value={newEntry} onChange={e => setNewEntry(e.target.value)}
+            placeholder="O que aconteceu hoje na sua jornada? Registre suas batalhas, aprendizados e reflexões..."
+            rows={4} maxLength={500}
+            style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: 10, padding: "10px 12px", fontSize: 14, resize: "none", fontFamily: "inherit", lineHeight: 1.5 }}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{newEntry.length}/500</span>
+            <button onClick={addEntry} disabled={saving || !newEntry.trim()} className="btn-primary" style={{ padding: "10px 20px", fontSize: 13 }}>
+              <Scroll size={14}/> {saving ? "Salvando..." : "Registrar"}
+            </button>
+          </div>
         </div>
-        <textarea
-          value={newEntry} onChange={e => setNewEntry(e.target.value)}
-          placeholder="O que aconteceu hoje na sua jornada? Registre suas batalhas, aprendizados e reflexões..."
-          rows={4} maxLength={500}
-          style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: 10, padding: "10px 12px", fontSize: 14, resize: "none", fontFamily: "inherit", lineHeight: 1.5 }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{newEntry.length}/500</span>
-          <button onClick={addEntry} disabled={saving || !newEntry.trim()} className="btn-primary" style={{ padding: "10px 20px", fontSize: 13 }}>
-            <Scroll size={14}/> {saving ? "Salvando..." : "Registrar"}
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Entradas */}
       {loading ? <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center" }}>Carregando diário...</p>
@@ -320,23 +333,52 @@ function DiarioTab({ user }) {
   );
 }
 
-// --- MAIN PAGE ---
-export default function PerfilPage() {
-  const { user, loading } = useAuth();
+function PerfilContent() {
+  const { user: currentUser, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  
+  const [viewUser, setViewUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("guerreiro");
 
-  useEffect(() => {
-    if (!loading && !user) router.push("/login");
-  }, [user, loading, router]);
+  const queryUid = searchParams.get("uid");
+  const isOwnProfile = !queryUid || queryUid === currentUser?.uid;
 
-  if (loading || !user) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#05050f" }}><div style={{ color: "#3b82f6", fontSize: 32 }}>⚔️</div></div>;
+  useEffect(() => {
+    if (authLoading) return;
+    if (!currentUser) { router.push("/login"); return; }
+
+    if (isOwnProfile) {
+      setViewUser(currentUser);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      getDoc(doc(db, "users", queryUid)).then(snap => {
+        if (snap.exists()) {
+          setViewUser({ uid: snap.id, ...snap.data() });
+        } else {
+          toast.error("Usuário não encontrado.");
+          router.push("/dashboard");
+        }
+        setLoading(false);
+      });
+    }
+  }, [queryUid, currentUser, authLoading, isOwnProfile, router]);
+
+  // Se for o próprio perfil, usa o currentUser do context (que agora é reativo)
+  const userData = isOwnProfile ? currentUser : viewUser;
+
+  if (loading || authLoading || !userData) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#05050f" }}><div style={{ color: "#3b82f6", fontSize: 32 }}>⚔️</div></div>;
 
   const handleSave = async (data) => {
     try {
-      await updateDoc(doc(db, "users", user.uid), data);
+      await updateDoc(doc(db, "users", currentUser.uid), data);
       toast.success("Personagem atualizado!");
-    } catch { toast.error("Erro ao salvar."); }
+    } catch (e) { 
+      console.error(e);
+      toast.error("Erro ao salvar."); 
+    }
   };
 
   const TABS = [
@@ -351,8 +393,8 @@ export default function PerfilPage() {
       <header className="page-header">
         <button className="back-button" onClick={() => router.push("/dashboard")}><ChevronLeft size={20}/></button>
         <div>
-          <h1 className="page-title" style={{ fontSize: "1.5rem" }}>Meu Perfil</h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>@{user.displayName || user.email?.split("@")[0]}</p>
+          <h1 className="page-title" style={{ fontSize: "1.5rem" }}>{isOwnProfile ? "Meu Perfil" : "Perfil do Guerreiro"}</h1>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>@{userData.displayName || userData.email?.split("@")[0]}</p>
         </div>
       </header>
 
@@ -361,10 +403,19 @@ export default function PerfilPage() {
         {TABS.map(t => <Tab key={t.key} active={tab===t.key} onClick={() => setTab(t.key)} icon={t.icon} label={t.label}/>)}
       </div>
 
-      {tab === "guerreiro"  && <GuerreiroTab user={user} onSave={handleSave}/>}
-      {tab === "inventario" && <InventarioTab user={user}/>}
-      {tab === "historico"  && <HistoricoTab user={user}/>}
-      {tab === "diario"     && <DiarioTab user={user}/>}
+      {tab === "guerreiro"  && <GuerreiroTab user={userData} onSave={handleSave} isOwnProfile={isOwnProfile}/>}
+      {tab === "inventario" && <InventarioTab userId={userData.uid} userCoins={userData.coins}/>}
+      {tab === "historico"  && <HistoricoTab userId={userData.uid}/>}
+      {tab === "diario"     && <DiarioTab userId={userData.uid} userName={userData.displayName} isOwnProfile={isOwnProfile}/>}
     </div>
+  );
+}
+
+// --- MAIN EXPORT ---
+export default function PerfilPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <PerfilContent />
+    </Suspense>
   );
 }
