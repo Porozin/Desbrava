@@ -11,13 +11,13 @@ const ROOMS = [
 ];
 
 const MONSTERS = [
-  { name: "Sombra Rasteira",  emoji: "👺", hp: 55, atk: 10, xp: 20 },
-  { name: "Lobo das Trevas",  emoji: "🐺", hp: 65, atk: 13, xp: 25 },
-  { name: "Aranha Abissal",   emoji: "🕷️", hp: 50, atk: 12, xp: 22 },
-  { name: "Espírito Errante", emoji: "👻", hp: 60, atk: 11, xp: 23 },
-  { name: "Servo da Morte",   emoji: "💀", hp: 70, atk: 15, xp: 28 },
+  { name: "Sombra Rasteira",  emoji: "👺", hp: 55, maxHp: 55, atk: 10, xp: 20 },
+  { name: "Lobo das Trevas",  emoji: "🐺", hp: 65, maxHp: 65, atk: 13, xp: 25 },
+  { name: "Aranha Abissal",   emoji: "🕷️", hp: 50, maxHp: 50, atk: 12, xp: 22 },
+  { name: "Espírito Errante", emoji: "👻", hp: 60, maxHp: 60, atk: 11, xp: 23 },
+  { name: "Servo da Morte",   emoji: "💀", hp: 70, maxHp: 70, atk: 15, xp: 28 },
 ];
-const BOSS = { name: "Guardião das Sombras", emoji: "🐲", hp: 200, atk: 22, xp: 100 };
+const BOSS = { name: "Guardião das Sombras", emoji: "🐲", hp: 200, maxHp: 200, atk: 22, xp: 100 };
 
 const EVENTS = [
   { icon: "🧙", title: "O Sábio Errante", desc: "Um ancião oferece ervas medicinais. Aceitar?", a: "Aceitar (+30 HP)", b: "Recusar", ea: p => ({ ...p, hp: Math.min(p.maxHp, p.hp+30) }), la: "+30 HP restaurado!", lb: "Você segue adiante." },
@@ -109,7 +109,8 @@ export default function DungeonGame({ user, onFinish }) {
 
   const startCombat = useCallback(() => {
     const isBoss = progress >= MAX-1;
-    setEnemy(isBoss ? {...BOSS} : {...MONSTERS[Math.floor(Math.random()*MONSTERS.length)]});
+    const base = isBoss ? BOSS : MONSTERS[Math.floor(Math.random()*MONSTERS.length)];
+    setEnemy({ ...base });
     setDisabled(false);
     setScreen("combat");
     addLog("O inimigo surge das trevas!", "#ef4444");
@@ -210,15 +211,21 @@ export default function DungeonGame({ user, onFinish }) {
       {/* EXPLORE */}
       {screen==="explore" && (
         <>
-          <div style={S.topBar}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-              <span style={S.label}>Progresso</span>
-              <span style={{ ...S.label, color:"rgba(255,255,255,0.6)" }}>{progress}/{MAX}</span>
-            </div>
-            <div style={{ width:"100%", height:4, background:"rgba(255,255,255,0.08)", borderRadius:4, overflow:"hidden" }}>
-              <div style={{ height:"100%", width:`${(progress/MAX)*100}%`, background:"linear-gradient(90deg,#3b82f6,#8b5cf6)", borderRadius:4, transition:"width 0.7s ease", boxShadow:"0 0 8px #3b82f650" }}/>
-            </div>
+      <div style={S.topBar}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+          <span style={S.label}>Progresso</span>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ ...S.label, color:"rgba(255,255,255,0.6)" }}>{progress}/{MAX}</span>
+            <button
+              onClick={() => { if(confirm("Abandonar a masmorra? O progresso será perdido.")) window.location.href="/dashboard"; }}
+              style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff", padding:"4px 10px", borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:"0.05em" }}
+            >← SAIR</button>
           </div>
+        </div>
+        <div style={{ width:"100%", height:4, background:"rgba(255,255,255,0.08)", borderRadius:4, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:`${(progress/MAX)*100}%`, background:"linear-gradient(90deg,#3b82f6,#8b5cf6)", borderRadius:4, transition:"width 0.7s ease", boxShadow:"0 0 8px #3b82f650" }}/>
+        </div>
+      </div>
           <div style={S.center}>
             <div style={{ fontSize:80, lineHeight:1, animation:"float 3s ease-in-out infinite", filter:"drop-shadow(0 0 20px rgba(255,255,255,0.15))" }}>{room.icon}</div>
             <h2 style={{ color:"#fff", fontSize:22, fontWeight:900, margin:"4px 0 0" }}>{room.title}</h2>
