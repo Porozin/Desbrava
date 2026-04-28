@@ -45,6 +45,7 @@ function StatBar({ label, value, max = 100, color }) {
 // --- TABS ---
 
 function GuerreiroTab({ user, onSave, isOwnProfile }) {
+  console.log("GuerreiroTab Render:", { isOwnProfile, userId: user.uid });
   const [editing, setEditing] = useState(false);
   const [avatar, setAvatar] = useState(user.photoURL || "🛡️");
   const [titulo, setTitulo] = useState(user.titulo || "Sem Título");
@@ -74,13 +75,31 @@ function GuerreiroTab({ user, onSave, isOwnProfile }) {
       {/* Hero Card */}
       <div className="glass-card" style={{ padding: 24, textAlign: "center", position: "relative" }}>
         {isOwnProfile && (
-          <button onClick={() => setEditing(!editing)} style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", width: 36, height: 36, borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {editing ? <X size={16}/> : <Edit3 size={16}/>}
+          <button 
+            onClick={() => {
+              console.log("Edit button clicked, current state:", editing);
+              setEditing(!editing);
+            }} 
+            style={{ 
+              position: "absolute", top: 16, right: 16, 
+              background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", 
+              color: "#fff", width: 44, height: 44, borderRadius: 12, cursor: "pointer", 
+              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 30,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+              transition: "all 0.1s active",
+              transform: "scale(1)",
+              touchAction: "manipulation"
+            }}
+            onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.95)"}
+            onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+          >
+            {editing ? <X size={18}/> : <Edit3 size={18}/>}
           </button>
         )}
 
         {/* Avatar */}
-        <div style={{ fontSize: 72, lineHeight: 1, marginBottom: 8, filter: "drop-shadow(0 0 20px rgba(99,102,241,0.4))" }}>
+        <div style={{ fontSize: 72, lineHeight: 1, marginBottom: 8, filter: "drop-shadow(0 0 20px rgba(99,102,241,0.4))", pointerEvents: "none", userSelect: "none" }}>
           {avatar}
         </div>
 
@@ -346,6 +365,7 @@ function PerfilContent() {
   const isOwnProfile = !queryUid || queryUid === currentUser?.uid;
 
   useEffect(() => {
+    console.log("PerfilContent Debug:", { queryUid, currentUid: currentUser?.uid, isOwnProfile });
     if (authLoading) return;
     if (!currentUser) { router.push("/login"); return; }
 
