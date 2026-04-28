@@ -51,11 +51,11 @@ export const initGame = (element, user, onFinish) => {
       });
       this.bind("MouseOver", () => {
         this.color("rgba(255, 255, 255, 0.12)");
-        this.css({ "transform": "translateY(-2px)", "border-color": "rgba(255,255,255,0.3)" });
+        this.css({ "border-color": "rgba(255,255,255,0.3)" });
       });
       this.bind("MouseOut", () => {
         this.color("rgba(255, 255, 255, 0.05)");
-        this.css({ "transform": "translateY(0)", "border-color": "rgba(255,255,255,0.15)" });
+        this.css({ "border-color": "rgba(255,255,255,0.15)" });
       });
     },
     label: function(txt) {
@@ -64,11 +64,11 @@ export const initGame = (element, user, onFinish) => {
     },
     variant: function(type) {
       if (type === "primary") {
-        this.css({ "background": "linear-gradient(135deg, #3b82f6, #2563eb)", "border": "none" });
+        this.css({ "background": "linear-gradient(135deg, #3b82f6, #2563eb)", "border": "none", "color": "#fff" });
       } else if (type === "danger") {
-        this.css({ "background": "linear-gradient(135deg, #ef4444, #dc2626)", "border": "none" });
+        this.css({ "background": "linear-gradient(135deg, #ef4444, #dc2626)", "border": "none", "color": "#fff" });
       } else if (type === "warning") {
-        this.css({ "background": "linear-gradient(135deg, #f59e0b, #d97706)", "border": "none", "color": "#000" });
+        this.css({ "background": "linear-gradient(135deg, #f59e0b, #d97706)", "border": "none", "color": "#fff" });
       }
       return this;
     }
@@ -314,25 +314,35 @@ export const initGame = (element, user, onFinish) => {
       updateBars();
       if (enemy.hp <= 0) {
         logText.text("O inimigo foi dissipado!");
-        setTimeout(() => gameState.mode === "boss" ? victory() : Crafty.scene("Exploration", gameState.dungeonProgress++), 1200);
+        setTimeout(() => {
+          if (gameState.mode === "boss") {
+            victory();
+          } else {
+            gameState.dungeonProgress++;
+            Crafty.scene("Exploration");
+          }
+        }, 1200);
         return;
       }
       
       // Turno Inimigo
       setTimeout(() => {
-        gameState.player.hp -= enemy.atk;
+        const damage = Math.floor(enemy.atk * (0.8 + Math.random() * 0.4));
+        gameState.player.hp -= damage;
         updateBars();
-        logText.text(`${enemy.name} revidou com ${enemy.atk} de dano!`);
+        logText.text(`${enemy.name} revidou com ${damage} de dano!`);
         logText.textColor("#fff");
         if (gameState.player.hp <= 0) gameOver();
       }, 800);
     };
 
     const victory = () => {
+      // Bloquear ações
+      atkBtn.visible = feBtn.visible = false;
+      
       Crafty.e("2D, DOM, Color")
         .attr({ x: 0, y: 0, w: width, h: height, z: 5000 })
-        .color("rgba(0,0,0,0.9)")
-        .css({ "display": "flex", "flex-direction": "column", "align-items": "center", "justify-content": "center" });
+        .color("rgba(0,0,0,0.9)");
       
       Crafty.e("2D, DOM, Text")
         .attr({ x: 0, y: height/2 - 100, w: width, z: 5001 })
@@ -347,13 +357,26 @@ export const initGame = (element, user, onFinish) => {
         .textFont({ size: '24px', weight: '900' })
         .textAlign("center");
 
+      Crafty.e("2D, DOM, Text")
+        .attr({ x: 0, y: height/2 + 60, w: width, z: 5001 })
+        .text("+100 XP RECOMPENSADO")
+        .textColor("#fff")
+        .textAlign("center");
+
       if (onFinish) onFinish(100);
-      setTimeout(() => window.location.href = "/dashboard", 3500);
+      setTimeout(() => window.location.href = "/dashboard", 4000);
     };
 
     const gameOver = () => {
+      atkBtn.visible = feBtn.visible = false;
       logText.text("Sua jornada termina aqui...");
-      setTimeout(() => window.location.reload(), 2000);
+      logText.textColor("#ef4444");
+      
+      Crafty.e("GameButton")
+        .attr({ x: width/2 - 150, y: height/2 + 50, z: 6000 })
+        .label("TENTAR NOVAMENTE 🔄")
+        .variant("danger")
+        .bind("Click", () => window.location.reload());
     };
   });
 
