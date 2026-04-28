@@ -1,310 +1,488 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { QUESTOES_FE } from "./questions";
+import { sounds } from "./sounds";
+import { generateDungeonIntro, generateEnemyTaunt } from "./ai";
+import { 
+  Sword, Shield, Sparkles, ChevronLeft, Package, 
+  Trash2, Zap, Heart, Flame, Scroll, Trophy, X
+} from "lucide-react";
+
+// --- CONSTANTS ---
 
 const ROOMS = [
-  { title: "Bosque do Silêncio", icon: "🌲", desc: "Árvores sussurram segredos nas sombras. Escolha seu caminho.", bg: "radial-gradient(ellipse at top, #052e16 0%, #020617 60%)" },
-  { title: "Caverna do Eco",     icon: "🕳️", desc: "A escuridão amplifica cada som. Algo espreia na penumbra.", bg: "radial-gradient(ellipse at top, #1c1917 0%, #020617 60%)" },
-  { title: "Rio das Sombras",   icon: "🌊", desc: "Águas negras correm silenciosas. Algo se move sob elas.", bg: "radial-gradient(ellipse at top, #0c1445 0%, #020617 60%)" },
-  { title: "Altar Proibido",    icon: "🏛️", desc: "Ruínas pulsam com energia esquecida. O perigo é real.", bg: "radial-gradient(ellipse at top, #2e1065 0%, #020617 60%)" },
-  { title: "Portal Final",      icon: "🌀", desc: "O ar distorce. O Guardião aguarda do outro lado.", bg: "radial-gradient(ellipse at top, #450a0a 0%, #020617 60%)" },
+  { title: "Bosque do Silêncio", icon: "🌲", desc: "Árvores sussurram segredos nas sombras.", bg: "radial-gradient(ellipse at top, #052e16 0%, #020617 60%)" },
+  { title: "Caverna do Eco",     icon: "🕳️", desc: "A escuridão amplifica cada som.", bg: "radial-gradient(ellipse at top, #1c1917 0%, #020617 60%)" },
+  { title: "Rio das Sombras",   icon: "🌊", desc: "Águas negras correm silenciosas.", bg: "radial-gradient(ellipse at top, #0c1445 0%, #020617 60%)" },
+  { title: "Altar Proibido",    icon: "🏛️", desc: "Ruínas pulsam com energia esquecida.", bg: "radial-gradient(ellipse at top, #2e1065 0%, #020617 60%)" },
+  { title: "Portal Final",      icon: "🌀", desc: "O Guardião aguarda do outro lado.", bg: "radial-gradient(ellipse at top, #450a0a 0%, #020617 60%)" },
 ];
 
 const MONSTERS = [
-  { name: "Sombra Rasteira",  emoji: "👺", hp: 55, maxHp: 55, atk: 10, xp: 20 },
-  { name: "Lobo das Trevas",  emoji: "🐺", hp: 65, maxHp: 65, atk: 13, xp: 25 },
-  { name: "Aranha Abissal",   emoji: "🕷️", hp: 50, maxHp: 50, atk: 12, xp: 22 },
-  { name: "Espírito Errante", emoji: "👻", hp: 60, maxHp: 60, atk: 11, xp: 23 },
-  { name: "Servo da Morte",   emoji: "💀", hp: 70, maxHp: 70, atk: 15, xp: 28 },
+  { name: "Sombra Rasteira",  emoji: "👺", hp: 60, maxHp: 60, atk: 12, xp: 20 },
+  { name: "Lobo das Trevas",  emoji: "🐺", hp: 70, maxHp: 70, atk: 14, xp: 25 },
+  { name: "Aranha Abissal",   emoji: "🕷️", hp: 55, maxHp: 55, atk: 13, xp: 22 },
+  { name: "Espírito Errante", emoji: "👻", hp: 65, maxHp: 65, atk: 12, xp: 23 },
+  { name: "Servo da Morte",   emoji: "💀", hp: 80, maxHp: 80, atk: 16, xp: 28 },
 ];
-const BOSS = { name: "Guardião das Sombras", emoji: "🐲", hp: 200, maxHp: 200, atk: 22, xp: 100 };
 
-const EVENTS = [
-  { icon: "🧙", title: "O Sábio Errante", desc: "Um ancião oferece ervas medicinais. Aceitar?", a: "Aceitar (+30 HP)", b: "Recusar", ea: p => ({ ...p, hp: Math.min(p.maxHp, p.hp+30) }), la: "+30 HP restaurado!", lb: "Você segue adiante." },
-  { icon: "⚗️", title: "Elixir Misterioso", desc: "Uma poção brilha sobre uma pedra. Beber?", a: "Beber (+20 HP, +2 ATK)", b: "Ignorar", ea: p => ({ ...p, hp: Math.min(p.maxHp, p.hp+20), atk: p.atk+2 }), la: "+20 HP e +2 ATK!", lb: "Sabedoria guia seus passos." },
-  { icon: "📜", title: "Inscrição Sagrada", desc: "Versículos gravados em pedra. Parar para ler?", a: "Ler (+5 FÉ)", b: "Seguir", ea: p => ({ ...p, fe: p.fe+5 }), la: "+5 FÉ! A Palavra fortalece.", lb: "Sem tempo a perder." },
+const BOSS = { name: "Guardião das Sombras", emoji: "🐲", hp: 250, maxHp: 250, atk: 24, xp: 100 };
+
+const ITEM_POOL = [
+  { id: 'sw1', name: "Espada Curta", type: "weapon", bonus: { atk: 5 }, emoji: "🗡️", desc: "+5 ATK" },
+  { id: 'sw2', name: "Lâmina de Prata", type: "weapon", bonus: { atk: 10 }, emoji: "⚔️", desc: "+10 ATK" },
+  { id: 'sh1', name: "Escudo de Madeira", type: "armor", bonus: { maxHp: 20 }, emoji: "🛡️", desc: "+20 Max HP" },
+  { id: 'sh2', name: "Escudo de Ferro", type: "armor", bonus: { maxHp: 40 }, emoji: "🛡️", desc: "+40 Max HP" },
+  { id: 'bt1', name: "Botas de Couro", type: "accessory", bonus: { def: 5 }, emoji: "👞", desc: "+5 DEF" },
 ];
+
+// --- STYLES (SAP / RPG STYLE) ---
 
 const S = {
-  screen: { width:"100%", height:"100%", display:"flex", flexDirection:"column", position:"relative", overflow:"hidden", transition:"background 0.7s ease" },
-  topBar: { padding:"14px 20px 10px", borderBottom:"1px solid rgba(255,255,255,0.08)", background:"rgba(0,0,0,0.35)", backdropFilter:"blur(12px)" },
-  center: { flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"20px", textAlign:"center", gap:12 },
-  footer: { padding:"16px 20px", borderTop:"1px solid rgba(255,255,255,0.08)", background:"rgba(0,0,0,0.45)", backdropFilter:"blur(12px)", display:"flex", flexDirection:"column", gap:10 },
-  row: { display:"flex", gap:10 },
-  btn: (v="ghost") => ({
-    flex:1, padding:"14px 10px", borderRadius:14, fontFamily:"'Outfit',sans-serif",
-    fontWeight:700, fontSize:14, textTransform:"uppercase", letterSpacing:"0.06em",
-    cursor:"pointer", border:"none", transition:"all 0.15s ease", color:"#fff",
-    background: v==="primary" ? "linear-gradient(135deg,#3b82f6,#2563eb)"
-               : v==="danger"  ? "linear-gradient(135deg,#ef4444,#dc2626)"
-               : v==="warning" ? "linear-gradient(135deg,#f59e0b,#d97706)"
-               : v==="success" ? "linear-gradient(135deg,#10b981,#059669)"
-               : "rgba(255,255,255,0.08)",
-    border: v==="ghost" ? "1px solid rgba(255,255,255,0.12)" : "none",
-    boxShadow: v!=="ghost" ? "0 4px 16px rgba(0,0,0,0.3)" : "none",
+  screen: { width: "100%", height: "100%", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", background: "#020617" },
+  topBar: { padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(255,255,255,0.1)", zIndex: 10 },
+  main: { flex: 1, display: "flex", flexDirection: "column", position: "relative" },
+  footer: { padding: "20px", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(15px)", borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", gap: 12 },
+  logs: { height: 80, overflowY: "auto", padding: "0 10px", fontSize: 13, display: "flex", flexDirection: "column-reverse", gap: 4, color: "rgba(255,255,255,0.5)" },
+  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: 20, textAlign: "center" },
+  btn: (color = "#3b82f6") => ({
+    flex: 1, padding: "16px", borderRadius: 16, border: "none", background: color, color: "#fff", fontWeight: 800, 
+    fontSize: 14, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", 
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.1s ease",
+    boxShadow: `0 4px 0 ${color}CC`
   }),
-  btnFull: (v="ghost") => ({ ...S.btn(v), flex:"unset", width:"100%" }),
-  hpBarWrap: { width:140, height:6, background:"rgba(255,255,255,0.1)", borderRadius:6, overflow:"hidden" },
-  label: { color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.25em" },
-  logBox: { margin:"0 16px", padding:"12px 16px", borderRadius:14, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.06)", minHeight:44, textAlign:"center" },
+  btnSecondary: { padding: "12px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.05)", color: "#fff", cursor: "pointer" }
 };
 
-function HPBar({ hp, maxHp, color="#3b82f6" }) {
-  const pct = Math.max(0, Math.min(100, (hp/maxHp)*100));
-  const c = pct>60 ? color : pct>30 ? "#f59e0b" : "#ef4444";
-  return <div style={S.hpBarWrap}><div style={{ height:"100%", width:`${pct}%`, background:c, borderRadius:6, boxShadow:`0 0 8px ${c}80`, transition:"width 0.4s ease" }} /></div>;
-}
+// --- COMPONENTS ---
 
-function EntityBlock({ emoji, name, hp, maxHp, hit, hpColor }) {
+function ProgressBar({ current, max }) {
+  const pct = (current / max) * 100;
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, transition:"all 0.15s ease", transform: hit?"scale(0.8) rotate(8deg)":"scale(1) rotate(0deg)" }}>
-      <div style={{ fontSize:72, lineHeight:1, filter:`drop-shadow(0 0 18px ${hpColor}50)`, userSelect:"none" }}>{emoji}</div>
-      <p style={S.label}>{name}</p>
-      <HPBar hp={hp} maxHp={maxHp} color={hpColor} />
-      <p style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{Math.max(0,hp)} / {maxHp}</p>
+    <div style={{ flex: 1, height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 4, margin: "0 16px", overflow: "hidden" }}>
+      <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, #3b82f6, #8b5cf6)", transition: "width 0.5s ease" }} />
     </div>
   );
 }
 
-function QuizScreen({ q, onAnswer }) {
+function StatBadge({ icon: Icon, value, color }) {
   return (
-    <div style={{ ...S.screen, background:"radial-gradient(ellipse at top, #451a03 0%, #020617 60%)", padding:20, gap:16 }}>
-      <p style={{ color:"#fbbf24", fontSize:10, fontWeight:900, textTransform:"uppercase", letterSpacing:"0.35em", marginTop:20 }}>✝ Prova de Fé</p>
-      <div style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:"16px 20px" }}>
-        <p style={{ color:"#fff", fontWeight:600, lineHeight:1.6, fontSize:16 }}>{q.pergunta}</p>
-      </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:10, width:"100%" }}>
-        {q.opcoes.map((opt, i) => (
-          <button key={i} onClick={() => onAnswer(i)} style={{ ...S.btnFull("ghost"), textAlign:"left", padding:"14px 18px", fontWeight:600, fontSize:14, textTransform:"none", letterSpacing:"normal" }}>
-            <span style={{ color:"rgba(255,255,255,0.35)", fontWeight:900, marginRight:12 }}>{String.fromCharCode(65+i)}.</span>{opt}
-          </button>
-        ))}
-      </div>
+    <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: 8, fontSize: 12, border: `1px solid ${color}40` }}>
+      <Icon size={12} color={color} />
+      <span style={{ fontWeight: 700, color: "#fff" }}>{value}</span>
     </div>
   );
 }
+
+function HPBar({ current, max, color = "#ef4444" }) {
+  const pct = Math.max(0, (current / max) * 100);
+  return (
+    <div style={{ width: "100%", height: 10, background: "rgba(0,0,0,0.5)", borderRadius: 5, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
+      <div style={{ width: `${pct}%`, height: "100%", background: color, transition: "width 0.3s ease" }} />
+    </div>
+  );
+}
+
+// --- MAIN GAME COMPONENT ---
 
 export default function DungeonGame({ user, onFinish }) {
   const [screen, setScreen] = useState("loading");
   const [progress, setProgress] = useState(0);
-  const [player, setPlayer] = useState({ name: user.displayName?.split(" ")[0]||"Caçador", emoji: user.photoURL?.length<=4 ? user.photoURL : "🛡️", hp:100, maxHp:100, atk:15, fe:10 });
+  const [player, setPlayer] = useState({
+    name: user.displayName?.split(" ")[0] || "Caçador",
+    emoji: user.photoURL?.length <= 4 ? user.photoURL : "🛡️",
+    hp: 100, maxHp: 100, atk: 15, def: 5, fe: 10, xp: 0
+  });
   const [enemy, setEnemy] = useState(null);
-  const [log, setLog] = useState("O combate começou!");
-  const [logColor, setLogColor] = useState("#fff");
-  const [pHit, setPHit] = useState(false);
-  const [eHit, setEHit] = useState(false);
-  const [disabled, setDisabled] = useState(false);
-  const [activeEvent, setActiveEvent] = useState(null);
+  const [inventory, setInventory] = useState([]);
+  const [equipment, setEquipment] = useState({ weapon: null, armor: null, accessory: null });
+  const [logs, setLogs] = useState(["Benvindo ao Desbrava RPG."]);
+  const [activeTaunt, setActiveTaunt] = useState("");
   const [activeQuiz, setActiveQuiz] = useState(null);
-  const MAX = ROOMS.length;
+  const [puzzle, setPuzzle] = useState(null); // { sequence, input }
+  const [disabled, setDisabled] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
+  const [shake, setShake] = useState(null); // 'p' or 'e'
+  
+  const logEndRef = useRef(null);
+  const MAX_PROGRESS = ROOMS.length;
 
-  useEffect(() => { if (screen==="loading") { const t=setTimeout(()=>setScreen("explore"),1400); return ()=>clearTimeout(t); } }, [screen]);
+  const addLog = (msg) => setLogs(prev => [msg, ...prev].slice(0, 20));
 
-  const hit = (who) => {
-    if(who==="e"){setEHit(true);setTimeout(()=>setEHit(false),180);}
-    else{setPHit(true);setTimeout(()=>setPHit(false),180);}
-  };
+  useEffect(() => {
+    if (screen === "loading") {
+      generateDungeonIntro(player.name).then(msg => {
+        addLog(msg);
+        setTimeout(() => setScreen("explore"), 1500);
+      });
+    }
+  }, [screen, player.name]);
 
-  const addLog = (msg, color="#fff") => { setLog(msg); setLogColor(color); };
+  // Effects for equipment bonuses
+  const getAtk = () => player.atk + (equipment.weapon?.bonus.atk || 0);
+  const getMaxHp = () => player.maxHp + (equipment.armor?.bonus.maxHp || 0);
+  const getDef = () => player.def + (equipment.accessory?.bonus.def || 0);
 
   const startCombat = useCallback(() => {
-    const isBoss = progress >= MAX-1;
-    const base = isBoss ? BOSS : MONSTERS[Math.floor(Math.random()*MONSTERS.length)];
-    setEnemy({ ...base });
-    setDisabled(false);
+    const isBoss = progress >= MAX_PROGRESS - 1;
+    const template = isBoss ? BOSS : MONSTERS[Math.floor(Math.random() * MONSTERS.length)];
+    
+    // Variance
+    const variance = 0.8 + Math.random() * 0.4;
+    const spawn = { 
+      ...template, 
+      hp: Math.floor(template.hp * variance), 
+      maxHp: Math.floor(template.maxHp * variance),
+      atk: Math.floor(template.atk * variance),
+      prefix: variance > 1.1 ? "Feroz " : variance < 0.9 ? "Frágil " : ""
+    };
+    
+    setEnemy(spawn);
     setScreen("combat");
-    addLog("O inimigo surge das trevas!", "#ef4444");
-  }, [progress, MAX]);
-
-  const startEvent = () => { setActiveEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)]); setScreen("event"); };
-
-  const doAttack = () => {
-    if(disabled) return;
-    setDisabled(true);
-    hit("e");
-    setEnemy(prev => {
-      const newHp = prev.hp - player.atk;
-      addLog(`Você atacou! -${player.atk} HP`, "#60a5fa");
-      setTimeout(() => {
-        if(newHp<=0){ handleWin(prev.xp||30); return; }
-        setTimeout(()=>{
-          const dmg = Math.floor((enemy?.atk||10)*(0.85+Math.random()*0.3));
-          hit("p");
-          setPlayer(pp=>{
-            const nhp=pp.hp-dmg;
-            addLog(`Inimigo revidou! -${dmg} HP`,"#f87171");
-            if(nhp<=0)setTimeout(()=>setScreen("gameover"),700);
-            return {...pp,hp:Math.max(0,nhp)};
-          });
-          setDisabled(false);
-        },600);
-      },300);
-      return {...prev, hp:Math.max(0,newHp)};
-    });
-  };
+    sounds.play("click");
+    generateEnemyTaunt(spawn.name).then(setActiveTaunt);
+  }, [progress, MAX_PROGRESS]);
 
   const doFaith = () => {
-    if(disabled) return;
+    if (disabled) return;
     setDisabled(true);
-    setActiveQuiz(QUESTOES_FE[Math.floor(Math.random()*QUESTOES_FE.length)]);
+    sounds.play("click");
+    setActiveQuiz(QUESTOES_FE[Math.floor(Math.random() * QUESTOES_FE.length)]);
     setScreen("quiz");
   };
 
   const onQuizAnswer = (idx) => {
-    const q = activeQuiz; setActiveQuiz(null); setScreen("combat");
-    if(idx===q.correta){
-      hit("e");
-      setEnemy(prev=>{
-        const nhp=prev.hp-q.dano;
-        addLog(`✝ LUZ DIVINA! -${q.dano} crítico!`,"#fbbf24");
-        if(nhp<=0)setTimeout(()=>handleWin(prev.xp||30),500);
-        return {...prev,hp:Math.max(0,nhp)};
-      });
+    const q = activeQuiz;
+    setActiveQuiz(null);
+    setScreen("combat");
+    
+    if (idx === q.correta) {
+      sounds.play("faith");
+      setShake("e");
+      const dmg = q.dano;
+      const newEnemyHp = Math.max(0, enemy.hp - dmg);
+      addLog(`✨ LUZ DIVINA! Sua fé causou ${dmg} de dano crítico!`);
+      setEnemy(prev => ({ ...prev, hp: newEnemyHp }));
+      setTimeout(() => {
+        setShake(null);
+        if (newEnemyHp <= 0) handleVictory();
+        else setDisabled(false);
+      }, 500);
     } else {
-      hit("p");
-      setPlayer(pp=>({...pp,hp:Math.max(0,pp.hp-15)}));
-      addLog("Você hesitou... -15 HP","#f87171");
+      sounds.play("damage");
+      setShake("p");
+      addLog("⚠️ Sua fé vacilou... Você recebeu dano mental.");
+      setPlayer(prev => ({ ...prev, hp: Math.max(0, prev.hp - 15) }));
+      setTimeout(() => {
+        setShake(null);
+        setDisabled(false);
+      }, 500);
     }
-    setTimeout(()=>setDisabled(false),800);
   };
 
-  const handleWin = (xp) => {
-    const isBoss = progress >= MAX-1;
-    addLog(isBoss?"Guardião derrotado! 👑":"Inimigo dissipado!","#4ade80");
-    setTimeout(()=>{
-      if(isBoss){ setScreen("victory"); if(onFinish)onFinish(100); }
-      else { setProgress(p=>p+1); setScreen("explore"); }
-    },1000);
+  const startPuzzle = () => {
+    sounds.play("click");
+    const seq = Array.from({ length: 4 }, () => Math.floor(Math.random() * 4));
+    setPuzzle({ sequence: seq, input: [] });
+    setScreen("puzzle");
   };
 
-  const onEventChoice = (which) => {
-    const ev = activeEvent; setActiveEvent(null);
-    if(which===1){ setPlayer(p=>ev.ea(p)); addLog(ev.la,"#4ade80"); }
-    else { addLog(ev.lb,"rgba(255,255,255,0.5)"); }
-    setProgress(p=>p+1); setScreen("explore");
+  const onPuzzleClick = (val) => {
+    if (!puzzle) return;
+    const newIn = [...puzzle.input, val];
+    sounds.play("click");
+    
+    if (newIn[newIn.length - 1] !== puzzle.sequence[newIn.length - 1]) {
+      addLog("❌ Sequência incorreta! Você perdeu a chance.");
+      setScreen("explore");
+      return;
+    }
+
+    if (newIn.length === puzzle.sequence.length) {
+      sounds.play("levelUp");
+      addLog("✅ Mistério resolvido! Você ganhou +10 ATK temporário.");
+      setPlayer(prev => ({ ...prev, atk: prev.atk + 10 }));
+      setScreen("explore");
+      setProgress(p => p + 1);
+    } else {
+      setPuzzle({ ...puzzle, input: newIn });
+    }
   };
 
-  const room = ROOMS[Math.min(progress,ROOMS.length-1)];
-  const bg = { loading:"radial-gradient(ellipse at top,#0f172a,#020617)", explore:room.bg, combat:"radial-gradient(ellipse at top,#1e1b4b,#020617)", quiz:"radial-gradient(ellipse at top,#451a03,#020617)", event:"radial-gradient(ellipse at top,#052e16,#020617)", victory:"radial-gradient(ellipse at top,#78350f,#020617)", gameover:"radial-gradient(ellipse at top,#450a0a,#020617)" }[screen]||"#020617";
+  const doAttack = () => {
+    if (disabled || !enemy) return;
+    setDisabled(true);
+    sounds.play("attack");
+    
+    // Player Hit
+    setShake("e");
+    const crit = Math.random() > 0.85;
+    const dmg = crit ? getAtk() * 2 : getAtk();
+    const newEnemyHp = Math.max(0, enemy.hp - dmg);
+    
+    addLog(`💥 Você atacou o ${enemy.name}! ${crit ? 'CRÍTICO! ' : ''}-${dmg} HP`);
+    setEnemy(prev => ({ ...prev, hp: newEnemyHp }));
 
-  if(screen==="quiz"&&activeQuiz) return <QuizScreen q={activeQuiz} onAnswer={onQuizAnswer}/>;
+    setTimeout(() => {
+      setShake(null);
+      if (newEnemyHp <= 0) {
+        handleVictory();
+      } else {
+        // Enemy Turn
+        setTimeout(() => {
+          sounds.play("damage");
+          setShake("p");
+          const eDmg = Math.max(1, enemy.atk - getDef());
+          const newPlayerHp = Math.max(0, player.hp - eDmg);
+          
+          addLog(`💢 ${enemy.name} revidou! -${eDmg} HP`);
+          setPlayer(prev => ({ ...prev, hp: newPlayerHp }));
+          
+          if (newPlayerHp <= 0) {
+            sounds.play("defeat");
+            setScreen("gameover");
+          }
+          
+          setTimeout(() => {
+            setShake(null);
+            setDisabled(false);
+          }, 300);
+        }, 500);
+      }
+    }, 300);
+  };
+
+  const handleVictory = () => {
+    sounds.play("victory");
+    const xpGained = enemy.xp || 20;
+    addLog(`🏆 Vitória! +${xpGained} XP.`);
+    
+    // Loot chance
+    if (Math.random() > 0.5) {
+      const item = ITEM_POOL[Math.floor(Math.random() * ITEM_POOL.length)];
+      addLog(`🎁 Você encontrou: ${item.emoji} ${item.name}!`);
+      setInventory(prev => [...prev, item]);
+    }
+
+    setPlayer(prev => ({ ...prev, xp: prev.xp + xpGained }));
+    setTimeout(() => {
+      if (enemy.name === BOSS.name) {
+        setScreen("victory");
+        if (onFinish) onFinish(100);
+      } else {
+        setProgress(p => p + 1);
+        setScreen("explore");
+      }
+      setEnemy(null);
+      setDisabled(false);
+      setActiveTaunt("");
+    }, 1000);
+  };
+
+  const equipItem = (item) => {
+    sounds.play("click");
+    setEquipment(prev => {
+      const type = item.type === "weapon" ? "weapon" : item.type === "armor" ? "armor" : "accessory";
+      return { ...prev, [type]: item };
+    });
+    addLog(`Equipado: ${item.name}`);
+  };
+
+  const room = ROOMS[Math.min(progress, ROOMS.length - 1)];
 
   return (
-    <div style={{...S.screen, background:bg}}>
-      {/* Floating particles */}
-      {[0,1,2,3,4].map(i=>(
-        <div key={i} style={{ position:"absolute", width:3, height:3, borderRadius:"50%", background:"rgba(255,255,255,0.06)", left:`${10+i*20}%`, top:`${5+i*15}%`, animation:`floatParticle ${3+i*0.5}s ease-in-out infinite`, animationDelay:`${i*0.4}s`, pointerEvents:"none" }}/>
-      ))}
-
-      {/* LOADING */}
-      {screen==="loading" && (
-        <div style={S.center}>
-          <div style={{ fontSize:80, animation:"pulse 2s ease-in-out infinite" }}>🗡️</div>
-          <div><p style={{ color:"#3b82f6", fontSize:11, fontWeight:900, letterSpacing:"0.4em", textTransform:"uppercase" }}>Invocando</p>
-          <p style={{ color:"#fff", fontSize:24, fontWeight:900, marginTop:4 }}>A Masmorra</p></div>
-          <div style={{ display:"flex", gap:6, marginTop:8 }}>
-            {[0,1,2].map(i=><div key={i} style={{ width:8,height:8,background:"#3b82f6",borderRadius:"50%",animation:`bounce 1s ease-in-out ${i*0.2}s infinite` }}/>)}
-          </div>
-        </div>
-      )}
-
-      {/* EXPLORE */}
-      {screen==="explore" && (
-        <>
+    <div style={{ ...S.screen, background: screen === "explore" ? room.bg : S.screen.background }}>
+      
+      {/* TOP BAR */}
       <div style={S.topBar}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-          <span style={S.label}>Progresso</span>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <span style={{ ...S.label, color:"rgba(255,255,255,0.6)" }}>{progress}/{MAX}</span>
-            <button
-              onClick={() => { if(confirm("Abandonar a masmorra? O progresso será perdido.")) window.location.href="/dashboard"; }}
-              style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff", padding:"4px 10px", borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:"0.05em" }}
-            >← SAIR</button>
-          </div>
-        </div>
-        <div style={{ width:"100%", height:4, background:"rgba(255,255,255,0.08)", borderRadius:4, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${(progress/MAX)*100}%`, background:"linear-gradient(90deg,#3b82f6,#8b5cf6)", borderRadius:4, transition:"width 0.7s ease", boxShadow:"0 0 8px #3b82f650" }}/>
+        <button onClick={() => window.location.href="/dashboard"} style={S.btnSecondary}><ChevronLeft size={18}/></button>
+        <ProgressBar current={progress} max={MAX_PROGRESS} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <StatBadge icon={Heart} value={player.hp} color="#ef4444" />
+          <StatBadge icon={Flame} value={getAtk()} color="#f59e0b" />
+          <button onClick={() => setShowInventory(true)} style={{ ...S.btnSecondary, background: "var(--accent-primary)" }}><Package size={18}/></button>
         </div>
       </div>
-          <div style={S.center}>
-            <div style={{ fontSize:80, lineHeight:1, animation:"float 3s ease-in-out infinite", filter:"drop-shadow(0 0 20px rgba(255,255,255,0.15))" }}>{room.icon}</div>
-            <h2 style={{ color:"#fff", fontSize:22, fontWeight:900, margin:"4px 0 0" }}>{room.title}</h2>
-            <p style={{ color:"rgba(255,255,255,0.45)", fontSize:14, lineHeight:1.6, maxWidth:280 }}>{room.desc}</p>
-          </div>
-          <div style={S.footer}>
-            <button style={S.btnFull("primary")} onClick={startCombat}>⚔️ &nbsp; Enfrentar Perigos</button>
-            <button style={S.btnFull("ghost")} onClick={startEvent}>✨ &nbsp; Buscar Relíquias</button>
-          </div>
-        </>
-      )}
 
-      {/* COMBAT */}
-      {screen==="combat" && enemy && (
-        <>
-          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, padding:"20px 20px 12px" }}>
-            <EntityBlock emoji={enemy.emoji} name={enemy.name} hp={enemy.hp} maxHp={enemy.maxHp} hit={eHit} hpColor="#ef4444"/>
+      <div style={S.main}>
+        {/* EXPLORE SCREEN */}
+        {screen === "explore" && (
+          <div style={{ padding: 40, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 20, marginTop: "10%" }}>
+             <div style={{ fontSize: 100, filter: "drop-shadow(0 0 20px rgba(255,255,255,0.2))", animation: "float 3s ease-in-out infinite" }}>{room.icon}</div>
+             <h2 style={{ color: "#fff", fontSize: 28, fontWeight: 900 }}>{room.title}</h2>
+             <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 15, maxWidth: 300 }}>{room.desc}</p>
+             <div style={{ width: "100%", maxWidth: 300, display: "flex", flexDirection: "column", gap: 12, marginTop: 20 }}>
+                <button style={S.btn("#3b82f6")} onClick={startCombat}><Sword size={20}/> Seguir em Frente</button>
+                <button style={S.btn("#fbbf24")} onClick={startPuzzle}><Zap size={20}/> Caminho Oculto</button>
+                <button style={S.btn("rgba(255,255,255,0.1)")} onClick={() => { addLog("🔍 Você vasculhou a área mas nada encontrou."); setProgress(p=>p+1); }}><Scroll size={20}/> Investigar</button>
+             </div>
           </div>
-          <div style={S.logBox}><p style={{ color:logColor, fontSize:14, fontWeight:600 }}>{log}</p></div>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"12px 0" }}>
-            <EntityBlock emoji={player.emoji} name={player.name} hp={player.hp} maxHp={player.maxHp} hit={pHit} hpColor="#3b82f6"/>
-          </div>
-          <div style={S.footer}>
-            <div style={S.row}>
-              <button style={S.btn("primary")} onClick={doAttack} disabled={disabled}>⚔️ Atacar</button>
-              <button style={S.btn("warning")} onClick={doFaith} disabled={disabled}>✨ Usar Fé</button>
+        )}
+
+        {/* COMBAT SCREEN */}
+        {screen === "combat" && enemy && (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 20, justifyContent: "space-between" }}>
+            
+            {/* Enemy Side */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginTop: 20, transform: shake === "e" ? "translateY(10px)" : "none", transition: "transform 0.1s" }}>
+              {activeTaunt && (
+                <div style={{ background: "#fff", color: "#000", padding: "6px 12px", borderRadius: "12px 12px 12px 0", fontSize: 12, fontWeight: 700, position: "relative", marginBottom: 10 }}>
+                  {activeTaunt}
+                  <div style={{ position: "absolute", bottom: -6, left: 0, width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid #fff" }} />
+                </div>
+              )}
+              <div style={{ fontSize: 80 }}>{enemy.emoji}</div>
+              <div style={{ width: "100%", maxWidth: 200 }}>
+                <HPBar current={enemy.hp} max={enemy.maxHp} />
+                <p style={{ color: "#fff", fontSize: 11, textAlign: "center", marginTop: 4, fontWeight: 900, textTransform: "uppercase" }}>{enemy.prefix}{enemy.name}</p>
+              </div>
+            </div>
+
+            <div style={{ height: 2, background: "rgba(255,255,255,0.05)", width: "80%", alignSelf: "center" }} />
+
+            {/* Player Side */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginBottom: 20, transform: shake === "p" ? "translateY(-10px)" : "none", transition: "transform 0.1s" }}>
+               <div style={{ fontSize: 80, border: "4px solid var(--accent-primary)", borderRadius: 30, width: 120, height: 120, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(59,130,246,0.1)" }}>{player.emoji}</div>
+               <div style={{ width: "100%", maxWidth: 200 }}>
+                <HPBar current={player.hp} max={getMaxHp()} color="#3b82f6" />
+                <p style={{ color: "#fff", fontSize: 11, textAlign: "center", marginTop: 4, fontWeight: 900 }}>{player.name}</p>
+              </div>
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {/* EVENT */}
-      {screen==="event" && activeEvent && (
-        <>
-          <div style={S.center}>
-            <div style={{ fontSize:72, animation:"float 3s ease-in-out infinite" }}>{activeEvent.icon}</div>
-            <h2 style={{ color:"#fbbf24", fontSize:20, fontWeight:900 }}>{activeEvent.title}</h2>
-            <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, lineHeight:1.6, maxWidth:280 }}>{activeEvent.desc}</p>
+        {/* LOADING */}
+        {screen === "loading" && (
+          <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
+            <div style={{ fontSize: 60, animation: "spin 2s linear infinite" }}>⚙️</div>
+            <p style={{ color: "var(--accent-primary)", fontWeight: 900, letterSpacing: 5 }}>INVOCANDO...</p>
           </div>
-          <div style={S.footer}>
-            <button style={S.btnFull("success")} onClick={()=>onEventChoice(1)}>✅ &nbsp;{activeEvent.a}</button>
-            <button style={S.btnFull("ghost")} onClick={()=>onEventChoice(2)}>{activeEvent.b}</button>
-          </div>
-        </>
-      )}
+        )}
 
-      {/* VICTORY */}
-      {screen==="victory" && (
-        <div style={S.center}>
-          <div style={{ fontSize:90, animation:"bounce 1.2s ease-in-out infinite", filter:"drop-shadow(0 0 30px rgba(251,191,36,0.5))" }}>👑</div>
-          <div><p style={{ color:"#fbbf24", fontSize:10, fontWeight:900, letterSpacing:"0.35em", textTransform:"uppercase" }}>Vitória Lendária</p>
-          <h1 style={{ color:"#fff", fontSize:26, fontWeight:900, marginTop:4 }}>Masmorra Concluída!</h1></div>
-          <div style={{ background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)", borderRadius:16, padding:"16px 40px", marginTop:4 }}>
-            <p style={{ color:"#fbbf24", fontSize:36, fontWeight:900 }}>+100 XP</p>
-            <p style={{ color:"rgba(255,255,255,0.4)", fontSize:12, marginTop:4 }}>Recompensa adquirida</p>
+        {/* QUIZ SCREEN */}
+        {screen === "quiz" && activeQuiz && (
+          <div style={{ padding: 40, display: "flex", flexDirection: "column", gap: 20, marginTop: "10%" }}>
+            <h3 style={{ color: "#fbbf24", fontWeight: 900, fontSize: 18 }}>DESAFIO DE FÉ</h3>
+            <div style={S.card}>{activeQuiz.pergunta}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {activeQuiz.opcoes.map((opt, i) => (
+                <button key={i} onClick={() => onQuizAnswer(i)} style={S.btn("rgba(255,255,255,0.08)")}>{opt}</button>
+              ))}
+            </div>
           </div>
-          <button style={{ ...S.btn("primary"), flex:"unset", padding:"14px 40px", marginTop:8 }} onClick={()=>window.location.href="/dashboard"}>Voltar ao Acampamento 🏕️</button>
+        )}
+
+        {/* PUZZLE SCREEN */}
+        {screen === "puzzle" && puzzle && (
+          <div style={{ padding: 40, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 30, marginTop: "10%" }}>
+            <h3 style={{ color: "var(--accent-primary)", fontWeight: 900 }}>MISTÉRIO ANTIGO</h3>
+            <p style={{ color: "rgba(255,255,255,0.5)" }}>Repita a sequência de runas:</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 15, width: "100%", maxWidth: 200 }}>
+              {[0,1,2,3].map(v => (
+                <button key={v} onClick={() => onPuzzleClick(v)} style={{ ...S.btn("rgba(255,255,255,0.1)"), height: 80, fontSize: 30 }}>
+                  {["🔥", "💧", "🌿", "⚡"][v]}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {puzzle.input.map((_, i) => <div key={i} style={{ width: 12, height: 12, background: "var(--accent-primary)", borderRadius: "50%" }} />)}
+            </div>
+          </div>
+        )}
+        {screen === "gameover" && (
+          <div style={{ padding: 40, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 20, marginTop: "20%" }}>
+            <div style={{ fontSize: 100 }}>💀</div>
+            <h2 style={{ color: "#fff", fontSize: 32, fontWeight: 900 }}>DERROTA</h2>
+            <p style={{ color: "rgba(255,255,255,0.4)" }}>Sua jornada termina nas profundezas.</p>
+            <button style={S.btn("#ef4444")} onClick={() => window.location.reload()}>Tentar Novamente</button>
+          </div>
+        )}
+
+        {/* VICTORY */}
+        {screen === "victory" && (
+          <div style={{ padding: 40, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 20, marginTop: "15%" }}>
+            <div style={{ fontSize: 100, animation: "bounce 1s infinite" }}>🏆</div>
+            <h2 style={{ color: "#fbbf24", fontSize: 32, fontWeight: 900 }}>VITÓRIA!</h2>
+            <div style={S.card}>
+              <p style={{ color: "#fbbf24", fontSize: 40, fontWeight: 900 }}>+100 XP</p>
+              <p style={{ color: "rgba(255,255,255,0.4)" }}>O clube celebra seu triunfo.</p>
+            </div>
+            <button style={S.btn("#fbbf24")} onClick={() => window.location.href="/dashboard"}>Voltar ao Acampamento</button>
+          </div>
+        )}
+      </div>
+
+      {/* FOOTER / LOGS / ACTIONS */}
+      <div style={S.footer}>
+        <div style={S.logs}>
+          {logs.map((l, i) => <div key={i}>{l}</div>)}
         </div>
-      )}
+        {screen === "combat" && (
+          <div style={{ display: "flex", gap: 12 }}>
+            <button style={S.btn("#ef4444")} onClick={doAttack} disabled={disabled}><Flame size={18}/> Atacar</button>
+            <button style={S.btn("#fbbf24")} onClick={() => { sounds.play("click"); addLog("✨ Você usa sua fé! (Quiz em breve)"); }} disabled={disabled}><Sparkles size={18}/> Fé</button>
+          </div>
+        )}
+      </div>
 
-      {/* GAME OVER */}
-      {screen==="gameover" && (
-        <div style={S.center}>
-          <div style={{ fontSize:90, filter:"grayscale(1) opacity(0.8)" }}>💀</div>
-          <div><p style={{ color:"#ef4444", fontSize:10, fontWeight:900, letterSpacing:"0.35em", textTransform:"uppercase" }}>Derrota</p>
-          <h1 style={{ color:"#fff", fontSize:22, fontWeight:900, marginTop:4 }}>Sua Jornada Termina Aqui</h1>
-          <p style={{ color:"rgba(255,255,255,0.4)", fontSize:14, marginTop:6 }}>Os fortes aprendem com a queda.</p></div>
-          <button style={{ ...S.btn("danger"), flex:"unset", padding:"14px 40px", marginTop:8 }} onClick={()=>window.location.reload()}>🔄 Tentar Novamente</button>
+      {/* INVENTORY MODAL */}
+      {showInventory && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ width: "100%", maxWidth: 400, background: "#0f172a", borderRadius: 32, border: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+             <div style={{ padding: 20, borderBottom: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontWeight: 900, display: "flex", alignItems: "center", gap: 8 }}><Package size={20} color="#fbbf24"/> INVENTÁRIO</h3>
+                <button onClick={() => setShowInventory(false)} style={S.btnSecondary}><X size={18}/></button>
+             </div>
+             
+             <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* Equipment */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                   <EquipSlot label="Arma" item={equipment.weapon} />
+                   <EquipSlot label="Armadura" item={equipment.armor} />
+                   <EquipSlot label="Acessório" item={equipment.accessory} />
+                </div>
+
+                <div style={{ height: 1, background: "rgba(255,255,255,0.05)" }} />
+
+                {/* Items */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
+                   {inventory.length === 0 ? <p style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", padding: 20 }}>Nenhum item encontrado.</p> : 
+                    inventory.map((item, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div style={{ fontSize: 24 }}>{item.emoji}</div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 13, fontWeight: 700 }}>{item.name}</p>
+                          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{item.desc}</p>
+                        </div>
+                        <button onClick={() => equipItem(item)} style={{ ...S.btnSecondary, fontSize: 10, padding: "6px 12px" }}>EQUIPAR</button>
+                      </div>
+                    ))
+                   }
+                </div>
+             </div>
+          </div>
         </div>
       )}
 
       <style>{`
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-        @keyframes floatParticle { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-20px) scale(1.5)} }
-        button:active { transform: scale(0.96) !important; }
-        button:disabled { opacity: 0.4 !important; cursor: not-allowed !important; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        button:active { transform: scale(0.95); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
+    </div>
+  );
+}
+
+function EquipSlot({ label, item }) {
+  return (
+    <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 6 }}>
+      <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", fontWeight: 900 }}>{label}</p>
+      <div style={{ height: 60, background: "rgba(255,255,255,0.03)", border: "2px dashed rgba(255,255,255,0.1)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+        {item ? item.emoji : ""}
+      </div>
+      {item && <p style={{ fontSize: 9, color: "var(--accent-primary)", fontWeight: 700 }}>{item.name}</p>}
     </div>
   );
 }
