@@ -11,7 +11,7 @@ import { Toaster } from 'react-hot-toast';
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
-      <body>
+      <body suppressHydrationWarning>
         <AuthProvider>
           {children}
           <Toaster 
