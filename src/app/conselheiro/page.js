@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/AuthContext";
 import { db } from "../../lib/firebase";
-import { collection, getDocs, getDoc, setDoc, updateDoc, doc, query, where, addDoc, serverTimestamp, increment } from "firebase/firestore";
+import { collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, query, where, addDoc, serverTimestamp, increment } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Check, X, Plus, Coins, ShoppingCart, Lock, Unlock, Trash2 } from "lucide-react";
@@ -192,12 +192,12 @@ export default function ConselheiroPage() {
   const deletarMissao = async (id) => {
     if (!confirm("Tem certeza que deseja apagar esta missão para sempre?")) return;
     try {
-      const { deleteDoc } = await import("firebase/firestore");
       await deleteDoc(doc(db, "missoes", id));
-      toast.success("Missão apagada.");
+      toast.success("Missão apagada do sistema.");
       fetchMissoes();
     } catch (e) {
-      toast.error("Erro ao apagar.");
+      console.error(e);
+      toast.error("Erro ao apagar missão.");
     }
   };
 
