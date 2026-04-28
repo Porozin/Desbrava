@@ -2,223 +2,81 @@
 import { useState, useEffect, useCallback } from "react";
 import { QUESTOES_FE } from "./questions";
 
-// --- DATA ---
-const DUNGEON_ROOMS = [
-  { title: "Bosque do Silêncio", icon: "🌲", desc: "Árvores ancestrais sussurram segredos esquecidos. Cada passo ecoa como um tambor.", bg: "from-green-950 via-slate-950 to-black" },
-  { title: "Caverna do Eco",     icon: "🕳️", desc: "As paredes de pedra refletem tudo que você é. O medo é apenas a sua própria voz.", bg: "from-stone-950 via-slate-950 to-black" },
-  { title: "Rio das Sombras",   icon: "🌊", desc: "Águas negras correm silenciosas. Algo se move sob a superfície.", bg: "from-blue-950 via-slate-950 to-black" },
-  { title: "Altar Proibido",    icon: "🏛️", desc: "Ruínas de um templo antigo. A pedra pulsa com energia esquecida.", bg: "from-purple-950 via-slate-950 to-black" },
-  { title: "Portal Final",      icon: "🌀", desc: "O ar distorce ao redor de um vórtice. O Guardião aguarda do outro lado.", bg: "from-indigo-950 via-slate-950 to-black" },
+const ROOMS = [
+  { title: "Bosque do Silêncio", icon: "🌲", desc: "Árvores sussurram segredos nas sombras. Escolha seu caminho.", bg: "radial-gradient(ellipse at top, #052e16 0%, #020617 60%)" },
+  { title: "Caverna do Eco",     icon: "🕳️", desc: "A escuridão amplifica cada som. Algo espreia na penumbra.", bg: "radial-gradient(ellipse at top, #1c1917 0%, #020617 60%)" },
+  { title: "Rio das Sombras",   icon: "🌊", desc: "Águas negras correm silenciosas. Algo se move sob elas.", bg: "radial-gradient(ellipse at top, #0c1445 0%, #020617 60%)" },
+  { title: "Altar Proibido",    icon: "🏛️", desc: "Ruínas pulsam com energia esquecida. O perigo é real.", bg: "radial-gradient(ellipse at top, #2e1065 0%, #020617 60%)" },
+  { title: "Portal Final",      icon: "🌀", desc: "O ar distorce. O Guardião aguarda do outro lado.", bg: "radial-gradient(ellipse at top, #450a0a 0%, #020617 60%)" },
 ];
 
 const MONSTERS = [
-  { name: "Sombra Rasteira",  emoji: "👺", hp: 55, atk: 10, xpReward: 20 },
-  { name: "Lobo das Trevas",  emoji: "🐺", hp: 65, atk: 13, xpReward: 25 },
-  { name: "Aranha Abissal",   emoji: "🕷️", hp: 50, atk: 12, xpReward: 22 },
-  { name: "Espírito Errante", emoji: "👻", hp: 60, atk: 11, xpReward: 23 },
-  { name: "Servo da Morte",   emoji: "💀", hp: 70, atk: 15, xpReward: 28 },
+  { name: "Sombra Rasteira",  emoji: "👺", hp: 55, atk: 10, xp: 20 },
+  { name: "Lobo das Trevas",  emoji: "🐺", hp: 65, atk: 13, xp: 25 },
+  { name: "Aranha Abissal",   emoji: "🕷️", hp: 50, atk: 12, xp: 22 },
+  { name: "Espírito Errante", emoji: "👻", hp: 60, atk: 11, xp: 23 },
+  { name: "Servo da Morte",   emoji: "💀", hp: 70, atk: 15, xp: 28 },
 ];
-
-const BOSS = { name: "Guardião das Sombras", emoji: "🐲", hp: 200, atk: 22, xpReward: 100 };
+const BOSS = { name: "Guardião das Sombras", emoji: "🐲", hp: 200, atk: 22, xp: 100 };
 
 const EVENTS = [
-  { icon: "🧙", title: "O Sábio Errante", desc: "Um ancião te oferece ervas medicinais em troca de uma pergunta respondida.", choice1: "Aceitar Oferta", choice2: "Recusar", effect1: (p) => ({ ...p, hp: Math.min(p.maxHp, p.hp + 30) }), log1: "+30 HP restaurado!", log2: "Você segue adiante..." },
-  { icon: "⚗️", title: "Elixir Misterioso", desc: "Uma poção brilha sobre uma pedra. Tomar ou deixar — a escolha é sua.", choice1: "Beber o Elixir",  choice2: "Ignorar",  effect1: (p) => ({ ...p, hp: Math.min(p.maxHp, p.hp + 20), atk: p.atk + 2 }), log1: "+20 HP e +2 ATK!", log2: "A sabedoria guia seus passos." },
-  { icon: "📜", title: "Inscrição Sagrada", desc: "Versículos antigos estão gravados na parede. Você para para ler.", choice1: "Ler com Cuidado",  choice2: "Seguir em Frente",  effect1: (p) => ({ ...p, fe: p.fe + 5 }), log1: "+5 FÉ! A palavra te fortalece.", log2: "Não há tempo a perder." },
+  { icon: "🧙", title: "O Sábio Errante", desc: "Um ancião oferece ervas medicinais. Aceitar?", a: "Aceitar (+30 HP)", b: "Recusar", ea: p => ({ ...p, hp: Math.min(p.maxHp, p.hp+30) }), la: "+30 HP restaurado!", lb: "Você segue adiante." },
+  { icon: "⚗️", title: "Elixir Misterioso", desc: "Uma poção brilha sobre uma pedra. Beber?", a: "Beber (+20 HP, +2 ATK)", b: "Ignorar", ea: p => ({ ...p, hp: Math.min(p.maxHp, p.hp+20), atk: p.atk+2 }), la: "+20 HP e +2 ATK!", lb: "Sabedoria guia seus passos." },
+  { icon: "📜", title: "Inscrição Sagrada", desc: "Versículos gravados em pedra. Parar para ler?", a: "Ler (+5 FÉ)", b: "Seguir", ea: p => ({ ...p, fe: p.fe+5 }), la: "+5 FÉ! A Palavra fortalece.", lb: "Sem tempo a perder." },
 ];
 
-// --- UTILS ---
-const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-
-// --- STYLES ---
-const css = {
-  btn: (variant = "ghost") => ({
-    ghost:   "bg-white/10 hover:bg-white/20 border border-white/20 text-white",
-    primary: "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white shadow-lg shadow-blue-900/40",
-    danger:  "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/40",
-    warning: "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white shadow-lg shadow-amber-900/40",
-    success: "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/40",
-  }[variant],
+const S = {
+  screen: { width:"100%", height:"100%", display:"flex", flexDirection:"column", position:"relative", overflow:"hidden", transition:"background 0.7s ease" },
+  topBar: { padding:"14px 20px 10px", borderBottom:"1px solid rgba(255,255,255,0.08)", background:"rgba(0,0,0,0.35)", backdropFilter:"blur(12px)" },
+  center: { flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"20px", textAlign:"center", gap:12 },
+  footer: { padding:"16px 20px", borderTop:"1px solid rgba(255,255,255,0.08)", background:"rgba(0,0,0,0.45)", backdropFilter:"blur(12px)", display:"flex", flexDirection:"column", gap:10 },
+  row: { display:"flex", gap:10 },
+  btn: (v="ghost") => ({
+    flex:1, padding:"14px 10px", borderRadius:14, fontFamily:"'Outfit',sans-serif",
+    fontWeight:700, fontSize:14, textTransform:"uppercase", letterSpacing:"0.06em",
+    cursor:"pointer", border:"none", transition:"all 0.15s ease", color:"#fff",
+    background: v==="primary" ? "linear-gradient(135deg,#3b82f6,#2563eb)"
+               : v==="danger"  ? "linear-gradient(135deg,#ef4444,#dc2626)"
+               : v==="warning" ? "linear-gradient(135deg,#f59e0b,#d97706)"
+               : v==="success" ? "linear-gradient(135deg,#10b981,#059669)"
+               : "rgba(255,255,255,0.08)",
+    border: v==="ghost" ? "1px solid rgba(255,255,255,0.12)" : "none",
+    boxShadow: v!=="ghost" ? "0 4px 16px rgba(0,0,0,0.3)" : "none",
+  }),
+  btnFull: (v="ghost") => ({ ...S.btn(v), flex:"unset", width:"100%" }),
+  hpBarWrap: { width:140, height:6, background:"rgba(255,255,255,0.1)", borderRadius:6, overflow:"hidden" },
+  label: { color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.25em" },
+  logBox: { margin:"0 16px", padding:"12px 16px", borderRadius:14, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.06)", minHeight:44, textAlign:"center" },
 };
 
-// --- SUB-COMPONENTS ---
-function HPBar({ value, max, color = "bg-blue-500", glow = "shadow-blue-500/60" }) {
-  const pct = clamp((value / max) * 100, 0, 100);
-  const colorClass = pct > 60 ? color : pct > 30 ? "bg-amber-500" : "bg-red-500";
+function HPBar({ hp, maxHp, color="#3b82f6" }) {
+  const pct = Math.max(0, Math.min(100, (hp/maxHp)*100));
+  const c = pct>60 ? color : pct>30 ? "#f59e0b" : "#ef4444";
+  return <div style={S.hpBarWrap}><div style={{ height:"100%", width:`${pct}%`, background:c, borderRadius:6, boxShadow:`0 0 8px ${c}80`, transition:"width 0.4s ease" }} /></div>;
+}
+
+function EntityBlock({ emoji, name, hp, maxHp, hit, hpColor }) {
   return (
-    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-500 ease-out shadow-md ${colorClass}`}
-        style={{ width: `${pct}%` }}
-      />
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, transition:"all 0.15s ease", transform: hit?"scale(0.8) rotate(8deg)":"scale(1) rotate(0deg)" }}>
+      <div style={{ fontSize:72, lineHeight:1, filter:`drop-shadow(0 0 18px ${hpColor}50)`, userSelect:"none" }}>{emoji}</div>
+      <p style={S.label}>{name}</p>
+      <HPBar hp={hp} maxHp={maxHp} color={hpColor} />
+      <p style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{Math.max(0,hp)} / {maxHp}</p>
     </div>
   );
 }
 
-function EntityCard({ emoji, name, hp, maxHp, isEnemy, hit }) {
+function QuizScreen({ q, onAnswer }) {
   return (
-    <div className={`flex flex-col items-center gap-2 ${hit ? (isEnemy ? "animate-hit-enemy" : "animate-hit-player") : ""}`}>
-      <div className={`text-7xl leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] select-none transition-all duration-150 ${hit ? "scale-90 opacity-70" : "scale-100 opacity-100"}`}>
-        {emoji}
+    <div style={{ ...S.screen, background:"radial-gradient(ellipse at top, #451a03 0%, #020617 60%)", padding:20, gap:16 }}>
+      <p style={{ color:"#fbbf24", fontSize:10, fontWeight:900, textTransform:"uppercase", letterSpacing:"0.35em", marginTop:20 }}>✝ Prova de Fé</p>
+      <div style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:"16px 20px" }}>
+        <p style={{ color:"#fff", fontWeight:600, lineHeight:1.6, fontSize:16 }}>{q.pergunta}</p>
       </div>
-      <p className="text-xs font-bold uppercase tracking-widest text-white/50">{name}</p>
-      <div className="w-32">
-        <HPBar value={hp} max={maxHp} color={isEnemy ? "bg-red-500" : "bg-blue-500"} />
-        <p className="text-center text-xs text-white/40 mt-1">{Math.max(0, hp)} / {maxHp}</p>
-      </div>
-    </div>
-  );
-}
-
-function GameBtn({ children, variant = "ghost", onClick, disabled, fullWidth, className = "" }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`
-        ${css.btn(variant)}
-        ${fullWidth ? "w-full" : "flex-1"}
-        py-4 px-4 rounded-2xl font-bold text-sm uppercase tracking-widest
-        active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed
-        ${className}
-      `}
-    >
-      {children}
-    </button>
-  );
-}
-
-function LogMessage({ msg, type = "neutral" }) {
-  const colors = { neutral: "text-white/80", good: "text-amber-300", bad: "text-red-400", info: "text-blue-300" };
-  return (
-    <div className={`text-center text-sm font-semibold min-h-[1.5rem] transition-all duration-300 ${colors[type]}`}>
-      {msg}
-    </div>
-  );
-}
-
-// --- SCREENS ---
-function LoadingScreen({ onDone }) {
-  useEffect(() => { setTimeout(onDone, 1400); }, [onDone]);
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-6 animate-fade-in">
-      <div className="text-8xl animate-pulse-slow">🗡️</div>
-      <div className="text-center">
-        <p className="text-xs font-black tracking-[0.4em] text-blue-400 uppercase">Invocando</p>
-        <p className="text-2xl font-black text-white tracking-tight mt-1">A Masmorra</p>
-      </div>
-      <div className="flex gap-1 mt-2">
-        {[0,1,2].map(i => (
-          <div key={i} className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.2}s` }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ExplorationScreen({ room, progress, maxProgress, onCombat, onEvent }) {
-  return (
-    <div className="flex flex-col h-full animate-slide-up">
-      {/* Progress Header */}
-      <div className="px-5 pt-5 pb-3 border-b border-white/10">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-black tracking-widest text-white/40 uppercase">Progresso</span>
-          <span className="text-xs font-black text-white/60">{progress}/{maxProgress}</span>
-        </div>
-        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-700" style={{ width: `${(progress / maxProgress) * 100}%` }} />
-        </div>
-      </div>
-
-      {/* Room Info */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 text-center">
-        <div className="text-8xl leading-none animate-float drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-          {room.icon}
-        </div>
-        <div>
-          <h2 className="text-2xl font-black text-white tracking-tight">{room.title}</h2>
-          <p className="text-sm text-white/50 mt-2 leading-relaxed max-w-xs">{room.desc}</p>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="p-5 border-t border-white/10 bg-black/30 backdrop-blur-md flex flex-col gap-3">
-        <GameBtn variant="primary" onClick={onCombat} fullWidth>
-          ⚔️ &nbsp; Enfrentar Perigos
-        </GameBtn>
-        <GameBtn variant="ghost" onClick={onEvent} fullWidth>
-          ✨ &nbsp; Buscar Relíquias
-        </GameBtn>
-      </div>
-    </div>
-  );
-}
-
-function CombatScreen({ player, enemy, onPlayerAtk, onFaith, log, logType, playerHit, enemyHit, disabled }) {
-  return (
-    <div className="flex flex-col h-full">
-      {/* Enemy Section */}
-      <div className="flex-1 flex flex-col items-center justify-center pt-6 px-4 gap-3">
-        <div className={`transition-all duration-150 ${enemyHit ? "scale-75 -rotate-6" : "scale-100 rotate-0"}`}>
-          <div className="text-7xl leading-none drop-shadow-[0_0_25px_rgba(239,68,68,0.4)] select-none">
-            {enemy.emoji}
-          </div>
-        </div>
-        <p className="text-xs font-black tracking-widest text-white/40 uppercase">{enemy.name}</p>
-        <div className="w-40">
-          <HPBar value={enemy.hp} max={enemy.maxHp} color="bg-red-500" />
-          <p className="text-center text-xs text-white/30 mt-1">{Math.max(0, enemy.hp)} / {enemy.maxHp}</p>
-        </div>
-      </div>
-
-      {/* VS Divider + Log */}
-      <div className="px-4 py-3 bg-black/40 mx-4 rounded-2xl text-center border border-white/5">
-        <LogMessage msg={log} type={logType} />
-      </div>
-
-      {/* Player Section */}
-      <div className="flex flex-col items-center px-4 py-4 gap-3">
-        <div className="w-40">
-          <HPBar value={player.hp} max={player.maxHp} color="bg-blue-500" />
-          <p className="text-center text-xs text-white/30 mt-1">{Math.max(0, player.hp)} / {player.maxHp}</p>
-        </div>
-        <p className="text-xs font-black tracking-widest text-white/40 uppercase">{player.name}</p>
-        <div className={`transition-all duration-150 ${playerHit ? "scale-75 rotate-6" : "scale-100 rotate-0"}`}>
-          <div className="text-7xl leading-none drop-shadow-[0_0_25px_rgba(59,130,246,0.4)] select-none">
-            {player.emoji}
-          </div>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="p-4 border-t border-white/10 bg-black/40 backdrop-blur-md">
-        <div className="flex gap-3">
-          <GameBtn variant="primary" onClick={onPlayerAtk} disabled={disabled}>⚔️ Atacar</GameBtn>
-          <GameBtn variant="warning" onClick={onFaith} disabled={disabled}>✨ Usar Fé</GameBtn>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function QuizScreen({ question, onAnswer }) {
-  return (
-    <div className="flex flex-col h-full animate-slide-up px-5 py-6 gap-5">
-      <div className="text-center">
-        <p className="text-xs font-black tracking-[0.3em] text-amber-400 uppercase mb-3">✝ Prova de Fé</p>
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-          <p className="text-white font-semibold text-base leading-relaxed">{question.pergunta}</p>
-        </div>
-      </div>
-      <div className="flex flex-col gap-3 flex-1">
-        {question.opcoes.map((opt, i) => (
-          <button
-            key={i}
-            onClick={() => onAnswer(i)}
-            className="w-full py-4 px-5 rounded-2xl border border-white/15 bg-white/5 hover:bg-white/15 active:scale-98 text-white font-semibold text-sm text-left transition-all duration-150 leading-snug"
-          >
-            <span className="text-white/40 mr-3 font-black">{String.fromCharCode(65 + i)}.</span>
-            {opt}
+      <div style={{ display:"flex", flexDirection:"column", gap:10, width:"100%" }}>
+        {q.opcoes.map((opt, i) => (
+          <button key={i} onClick={() => onAnswer(i)} style={{ ...S.btnFull("ghost"), textAlign:"left", padding:"14px 18px", fontWeight:600, fontSize:14, textTransform:"none", letterSpacing:"normal" }}>
+            <span style={{ color:"rgba(255,255,255,0.35)", fontWeight:900, marginRight:12 }}>{String.fromCharCode(65+i)}.</span>{opt}
           </button>
         ))}
       </div>
@@ -226,260 +84,220 @@ function QuizScreen({ question, onAnswer }) {
   );
 }
 
-function EventScreen({ event, onChoice1, onChoice2 }) {
-  return (
-    <div className="flex flex-col h-full animate-slide-up">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5 text-center">
-        <div className="text-7xl animate-float">{event.icon}</div>
-        <div>
-          <h2 className="text-xl font-black text-amber-300">{event.title}</h2>
-          <p className="text-sm text-white/50 mt-3 leading-relaxed max-w-xs">{event.desc}</p>
-        </div>
-      </div>
-      <div className="p-5 border-t border-white/10 bg-black/30 backdrop-blur-md flex flex-col gap-3">
-        <GameBtn variant="success" onClick={onChoice1} fullWidth>✅ &nbsp; {event.choice1}</GameBtn>
-        <GameBtn variant="ghost" onClick={onChoice2} fullWidth>{event.choice2}</GameBtn>
-      </div>
-    </div>
-  );
-}
-
-function VictoryScreen({ xp, onExit }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-6 animate-fade-in px-6 text-center">
-      <div className="text-9xl animate-bounce-slow drop-shadow-[0_0_40px_rgba(251,191,36,0.5)]">👑</div>
-      <div>
-        <p className="text-xs font-black tracking-[0.3em] text-amber-400 uppercase">Vitória Lendária</p>
-        <h1 className="text-3xl font-black text-white mt-2">Masmorra Concluída!</h1>
-      </div>
-      <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl px-8 py-4">
-        <p className="text-4xl font-black text-amber-300">+{xp} XP</p>
-        <p className="text-xs text-white/50 mt-1">Recompensa adquirida</p>
-      </div>
-      <GameBtn variant="primary" onClick={onExit} className="w-full max-w-xs">Voltar ao Acampamento 🏕️</GameBtn>
-    </div>
-  );
-}
-
-function GameOverScreen({ onRetry }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-6 animate-fade-in px-6 text-center">
-      <div className="text-9xl grayscale opacity-80">💀</div>
-      <div>
-        <p className="text-xs font-black tracking-[0.3em] text-red-400 uppercase">Derrota</p>
-        <h1 className="text-2xl font-black text-white mt-2">Sua Jornada Termina Aqui</h1>
-        <p className="text-sm text-white/40 mt-2">Os fortes aprendem com a queda.</p>
-      </div>
-      <GameBtn variant="danger" onClick={onRetry} className="w-full max-w-xs">🔄 Tentar Novamente</GameBtn>
-    </div>
-  );
-}
-
-// --- MAIN GAME ---
 export default function DungeonGame({ user, onFinish }) {
-  const [screen, setScreen] = useState("loading"); // loading, explore, combat, quiz, event, victory, gameover
+  const [screen, setScreen] = useState("loading");
   const [progress, setProgress] = useState(0);
-  const [player, setPlayer] = useState({
-    name: user.displayName?.split(" ")[0] || "Caçador",
-    emoji: user.photoURL && user.photoURL.length <= 4 ? user.photoURL : "🛡️",
-    hp: 100, maxHp: 100, atk: 15, fe: 10,
-  });
+  const [player, setPlayer] = useState({ name: user.displayName?.split(" ")[0]||"Caçador", emoji: user.photoURL?.length<=4 ? user.photoURL : "🛡️", hp:100, maxHp:100, atk:15, fe:10 });
   const [enemy, setEnemy] = useState(null);
   const [log, setLog] = useState("O combate começou!");
-  const [logType, setLogType] = useState("neutral");
-  const [playerHit, setPlayerHit] = useState(false);
-  const [enemyHit, setEnemyHit] = useState(false);
+  const [logColor, setLogColor] = useState("#fff");
+  const [pHit, setPHit] = useState(false);
+  const [eHit, setEHit] = useState(false);
   const [disabled, setDisabled] = useState(false);
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeQuiz, setActiveQuiz] = useState(null);
-  const MAX_PROGRESS = DUNGEON_ROOMS.length;
+  const MAX = ROOMS.length;
 
-  const triggerHit = (target) => {
-    if (target === "enemy") { setEnemyHit(true); setTimeout(() => setEnemyHit(false), 180); }
-    else { setPlayerHit(true); setTimeout(() => setPlayerHit(false), 180); }
+  useEffect(() => { if (screen==="loading") { const t=setTimeout(()=>setScreen("explore"),1400); return ()=>clearTimeout(t); } }, [screen]);
+
+  const hit = (who) => {
+    if(who==="e"){setEHit(true);setTimeout(()=>setEHit(false),180);}
+    else{setPHit(true);setTimeout(()=>setPHit(false),180);}
   };
 
-  const addLog = useCallback((msg, type = "neutral") => {
-    setLog(msg);
-    setLogType(type);
-  }, []);
+  const addLog = (msg, color="#fff") => { setLog(msg); setLogColor(color); };
 
   const startCombat = useCallback(() => {
-    const isBoss = progress >= MAX_PROGRESS - 1;
-    const m = isBoss ? { ...BOSS } : { ...MONSTERS[Math.floor(Math.random() * MONSTERS.length)] };
-    setEnemy(m);
-    setLog(`${m.name} surge das trevas!`);
-    setLogType("bad");
+    const isBoss = progress >= MAX-1;
+    setEnemy(isBoss ? {...BOSS} : {...MONSTERS[Math.floor(Math.random()*MONSTERS.length)]});
     setDisabled(false);
     setScreen("combat");
-  }, [progress, MAX_PROGRESS]);
+    addLog("O inimigo surge das trevas!", "#ef4444");
+  }, [progress, MAX]);
 
-  const startEvent = () => {
-    setActiveEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
-    setScreen("event");
-  };
+  const startEvent = () => { setActiveEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)]); setScreen("event"); };
 
-  const handleAttack = () => {
-    if (disabled) return;
+  const doAttack = () => {
+    if(disabled) return;
     setDisabled(true);
-    triggerHit("enemy");
-
+    hit("e");
     setEnemy(prev => {
       const newHp = prev.hp - player.atk;
-      addLog(`Você atacou! -${player.atk} HP inimigo`, "good");
-
+      addLog(`Você atacou! -${player.atk} HP`, "#60a5fa");
       setTimeout(() => {
-        if (newHp <= 0) {
-          handleVictoryCombat(prev.xpReward || 30);
-          return;
-        }
-        // Enemy turn
-        setTimeout(() => {
-          const dmg = Math.floor(enemy.atk * (0.85 + Math.random() * 0.3));
-          triggerHit("player");
-          setPlayer(pp => {
-            const nhp = pp.hp - dmg;
-            addLog(`${enemy.name} revidou! -${dmg} HP`, "bad");
-            if (nhp <= 0) { setTimeout(() => setScreen("gameover"), 800); }
-            return { ...pp, hp: Math.max(0, nhp) };
+        if(newHp<=0){ handleWin(prev.xp||30); return; }
+        setTimeout(()=>{
+          const dmg = Math.floor((enemy?.atk||10)*(0.85+Math.random()*0.3));
+          hit("p");
+          setPlayer(pp=>{
+            const nhp=pp.hp-dmg;
+            addLog(`Inimigo revidou! -${dmg} HP`,"#f87171");
+            if(nhp<=0)setTimeout(()=>setScreen("gameover"),700);
+            return {...pp,hp:Math.max(0,nhp)};
           });
           setDisabled(false);
-        }, 600);
-      }, 400);
-
-      return { ...prev, hp: Math.max(0, newHp) };
+        },600);
+      },300);
+      return {...prev, hp:Math.max(0,newHp)};
     });
   };
 
-  const handleFaith = () => {
-    if (disabled) return;
+  const doFaith = () => {
+    if(disabled) return;
     setDisabled(true);
-    const q = QUESTOES_FE[Math.floor(Math.random() * QUESTOES_FE.length)];
-    setActiveQuiz(q);
+    setActiveQuiz(QUESTOES_FE[Math.floor(Math.random()*QUESTOES_FE.length)]);
     setScreen("quiz");
   };
 
-  const handleQuizAnswer = (idx) => {
-    const q = activeQuiz;
-    setActiveQuiz(null);
-    setScreen("combat");
-
-    if (idx === q.correta) {
-      triggerHit("enemy");
-      setEnemy(prev => {
-        const newHp = prev.hp - q.dano;
-        addLog(`✝ LUZ DIVINA! -${q.dano} dano crítico!`, "good");
-        if (newHp <= 0) { setTimeout(() => handleVictoryCombat(prev.xpReward || 30), 500); return { ...prev, hp: 0 }; }
-        return { ...prev, hp: newHp };
+  const onQuizAnswer = (idx) => {
+    const q = activeQuiz; setActiveQuiz(null); setScreen("combat");
+    if(idx===q.correta){
+      hit("e");
+      setEnemy(prev=>{
+        const nhp=prev.hp-q.dano;
+        addLog(`✝ LUZ DIVINA! -${q.dano} crítico!`,"#fbbf24");
+        if(nhp<=0)setTimeout(()=>handleWin(prev.xp||30),500);
+        return {...prev,hp:Math.max(0,nhp)};
       });
     } else {
-      triggerHit("player");
-      setPlayer(pp => ({ ...pp, hp: Math.max(0, pp.hp - 15) }));
-      addLog("Você hesitou... -15 HP", "bad");
+      hit("p");
+      setPlayer(pp=>({...pp,hp:Math.max(0,pp.hp-15)}));
+      addLog("Você hesitou... -15 HP","#f87171");
     }
-    setTimeout(() => setDisabled(false), 800);
+    setTimeout(()=>setDisabled(false),800);
   };
 
-  const handleVictoryCombat = (xpReward) => {
-    const isBoss = progress >= MAX_PROGRESS - 1;
-    addLog(isBoss ? "O Guardião foi derrotado! 👑" : "Inimigo dissipado!", "good");
-    setTimeout(() => {
-      if (isBoss) {
-        setScreen("victory");
-        if (onFinish) onFinish(100);
-      } else {
-        setProgress(p => p + 1);
-        setScreen("explore");
-      }
-    }, 1200);
+  const handleWin = (xp) => {
+    const isBoss = progress >= MAX-1;
+    addLog(isBoss?"Guardião derrotado! 👑":"Inimigo dissipado!","#4ade80");
+    setTimeout(()=>{
+      if(isBoss){ setScreen("victory"); if(onFinish)onFinish(100); }
+      else { setProgress(p=>p+1); setScreen("explore"); }
+    },1000);
   };
 
-  const handleEventChoice = (which) => {
-    const ev = activeEvent;
-    setActiveEvent(null);
-    if (which === 1) {
-      setPlayer(p => ev.effect1(p));
-      addLog(ev.log1, "good");
-    } else {
-      addLog(ev.log2, "info");
-    }
-    setProgress(p => p + 1);
-    setScreen("explore");
+  const onEventChoice = (which) => {
+    const ev = activeEvent; setActiveEvent(null);
+    if(which===1){ setPlayer(p=>ev.ea(p)); addLog(ev.la,"#4ade80"); }
+    else { addLog(ev.lb,"rgba(255,255,255,0.5)"); }
+    setProgress(p=>p+1); setScreen("explore");
   };
 
-  const currentRoom = DUNGEON_ROOMS[Math.min(progress, DUNGEON_ROOMS.length - 1)];
+  const room = ROOMS[Math.min(progress,ROOMS.length-1)];
+  const bg = { loading:"radial-gradient(ellipse at top,#0f172a,#020617)", explore:room.bg, combat:"radial-gradient(ellipse at top,#1e1b4b,#020617)", quiz:"radial-gradient(ellipse at top,#451a03,#020617)", event:"radial-gradient(ellipse at top,#052e16,#020617)", victory:"radial-gradient(ellipse at top,#78350f,#020617)", gameover:"radial-gradient(ellipse at top,#450a0a,#020617)" }[screen]||"#020617";
 
-  const bgGradient = {
-    loading: "from-slate-950 via-slate-900 to-black",
-    explore: currentRoom?.bg || "from-slate-950 to-black",
-    combat: "from-red-950 via-slate-950 to-black",
-    quiz:   "from-amber-950 via-slate-950 to-black",
-    event:  "from-emerald-950 via-slate-950 to-black",
-    victory: "from-amber-950 via-slate-900 to-black",
-    gameover: "from-red-950 via-slate-950 to-black",
-  }[screen] || "from-slate-950 to-black";
+  if(screen==="quiz"&&activeQuiz) return <QuizScreen q={activeQuiz} onAnswer={onQuizAnswer}/>;
 
   return (
-    <>
+    <div style={{...S.screen, background:bg}}>
+      {/* Floating particles */}
+      {[0,1,2,3,4].map(i=>(
+        <div key={i} style={{ position:"absolute", width:3, height:3, borderRadius:"50%", background:"rgba(255,255,255,0.06)", left:`${10+i*20}%`, top:`${5+i*15}%`, animation:`floatParticle ${3+i*0.5}s ease-in-out infinite`, animationDelay:`${i*0.4}s`, pointerEvents:"none" }}/>
+      ))}
+
+      {/* LOADING */}
+      {screen==="loading" && (
+        <div style={S.center}>
+          <div style={{ fontSize:80, animation:"pulse 2s ease-in-out infinite" }}>🗡️</div>
+          <div><p style={{ color:"#3b82f6", fontSize:11, fontWeight:900, letterSpacing:"0.4em", textTransform:"uppercase" }}>Invocando</p>
+          <p style={{ color:"#fff", fontSize:24, fontWeight:900, marginTop:4 }}>A Masmorra</p></div>
+          <div style={{ display:"flex", gap:6, marginTop:8 }}>
+            {[0,1,2].map(i=><div key={i} style={{ width:8,height:8,background:"#3b82f6",borderRadius:"50%",animation:`bounce 1s ease-in-out ${i*0.2}s infinite` }}/>)}
+          </div>
+        </div>
+      )}
+
+      {/* EXPLORE */}
+      {screen==="explore" && (
+        <>
+          <div style={S.topBar}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+              <span style={S.label}>Progresso</span>
+              <span style={{ ...S.label, color:"rgba(255,255,255,0.6)" }}>{progress}/{MAX}</span>
+            </div>
+            <div style={{ width:"100%", height:4, background:"rgba(255,255,255,0.08)", borderRadius:4, overflow:"hidden" }}>
+              <div style={{ height:"100%", width:`${(progress/MAX)*100}%`, background:"linear-gradient(90deg,#3b82f6,#8b5cf6)", borderRadius:4, transition:"width 0.7s ease", boxShadow:"0 0 8px #3b82f650" }}/>
+            </div>
+          </div>
+          <div style={S.center}>
+            <div style={{ fontSize:80, lineHeight:1, animation:"float 3s ease-in-out infinite", filter:"drop-shadow(0 0 20px rgba(255,255,255,0.15))" }}>{room.icon}</div>
+            <h2 style={{ color:"#fff", fontSize:22, fontWeight:900, margin:"4px 0 0" }}>{room.title}</h2>
+            <p style={{ color:"rgba(255,255,255,0.45)", fontSize:14, lineHeight:1.6, maxWidth:280 }}>{room.desc}</p>
+          </div>
+          <div style={S.footer}>
+            <button style={S.btnFull("primary")} onClick={startCombat}>⚔️ &nbsp; Enfrentar Perigos</button>
+            <button style={S.btnFull("ghost")} onClick={startEvent}>✨ &nbsp; Buscar Relíquias</button>
+          </div>
+        </>
+      )}
+
+      {/* COMBAT */}
+      {screen==="combat" && enemy && (
+        <>
+          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, padding:"20px 20px 12px" }}>
+            <EntityBlock emoji={enemy.emoji} name={enemy.name} hp={enemy.hp} maxHp={enemy.maxHp} hit={eHit} hpColor="#ef4444"/>
+          </div>
+          <div style={S.logBox}><p style={{ color:logColor, fontSize:14, fontWeight:600 }}>{log}</p></div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"12px 0" }}>
+            <EntityBlock emoji={player.emoji} name={player.name} hp={player.hp} maxHp={player.maxHp} hit={pHit} hpColor="#3b82f6"/>
+          </div>
+          <div style={S.footer}>
+            <div style={S.row}>
+              <button style={S.btn("primary")} onClick={doAttack} disabled={disabled}>⚔️ Atacar</button>
+              <button style={S.btn("warning")} onClick={doFaith} disabled={disabled}>✨ Usar Fé</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* EVENT */}
+      {screen==="event" && activeEvent && (
+        <>
+          <div style={S.center}>
+            <div style={{ fontSize:72, animation:"float 3s ease-in-out infinite" }}>{activeEvent.icon}</div>
+            <h2 style={{ color:"#fbbf24", fontSize:20, fontWeight:900 }}>{activeEvent.title}</h2>
+            <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, lineHeight:1.6, maxWidth:280 }}>{activeEvent.desc}</p>
+          </div>
+          <div style={S.footer}>
+            <button style={S.btnFull("success")} onClick={()=>onEventChoice(1)}>✅ &nbsp;{activeEvent.a}</button>
+            <button style={S.btnFull("ghost")} onClick={()=>onEventChoice(2)}>{activeEvent.b}</button>
+          </div>
+        </>
+      )}
+
+      {/* VICTORY */}
+      {screen==="victory" && (
+        <div style={S.center}>
+          <div style={{ fontSize:90, animation:"bounce 1.2s ease-in-out infinite", filter:"drop-shadow(0 0 30px rgba(251,191,36,0.5))" }}>👑</div>
+          <div><p style={{ color:"#fbbf24", fontSize:10, fontWeight:900, letterSpacing:"0.35em", textTransform:"uppercase" }}>Vitória Lendária</p>
+          <h1 style={{ color:"#fff", fontSize:26, fontWeight:900, marginTop:4 }}>Masmorra Concluída!</h1></div>
+          <div style={{ background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)", borderRadius:16, padding:"16px 40px", marginTop:4 }}>
+            <p style={{ color:"#fbbf24", fontSize:36, fontWeight:900 }}>+100 XP</p>
+            <p style={{ color:"rgba(255,255,255,0.4)", fontSize:12, marginTop:4 }}>Recompensa adquirida</p>
+          </div>
+          <button style={{ ...S.btn("primary"), flex:"unset", padding:"14px 40px", marginTop:8 }} onClick={()=>window.location.href="/dashboard"}>Voltar ao Acampamento 🏕️</button>
+        </div>
+      )}
+
+      {/* GAME OVER */}
+      {screen==="gameover" && (
+        <div style={S.center}>
+          <div style={{ fontSize:90, filter:"grayscale(1) opacity(0.8)" }}>💀</div>
+          <div><p style={{ color:"#ef4444", fontSize:10, fontWeight:900, letterSpacing:"0.35em", textTransform:"uppercase" }}>Derrota</p>
+          <h1 style={{ color:"#fff", fontSize:22, fontWeight:900, marginTop:4 }}>Sua Jornada Termina Aqui</h1>
+          <p style={{ color:"rgba(255,255,255,0.4)", fontSize:14, marginTop:6 }}>Os fortes aprendem com a queda.</p></div>
+          <button style={{ ...S.btn("danger"), flex:"unset", padding:"14px 40px", marginTop:8 }} onClick={()=>window.location.reload()}>🔄 Tentar Novamente</button>
+        </div>
+      )}
+
       <style>{`
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes slide-up { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes fade-in { from{opacity:0} to{opacity:1} }
-        @keyframes pulse-slow { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @keyframes bounce-slow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-15px)} }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        .animate-slide-up { animation: slide-up 0.35s ease-out both; }
-        .animate-fade-in { animation: fade-in 0.5s ease-out both; }
-        .animate-pulse-slow { animation: pulse-slow 2s ease-in-out infinite; }
-        .animate-bounce-slow { animation: bounce-slow 1.2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        @keyframes floatParticle { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-20px) scale(1.5)} }
+        button:active { transform: scale(0.96) !important; }
+        button:disabled { opacity: 0.4 !important; cursor: not-allowed !important; }
       `}</style>
-      <div className={`w-full h-full bg-gradient-to-b ${bgGradient} transition-all duration-700 relative overflow-hidden`}>
-        {/* Ambient particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="absolute w-1 h-1 bg-white/5 rounded-full animate-float" style={{ left: `${15 + i * 16}%`, top: `${10 + (i % 3) * 25}%`, animationDelay: `${i * 0.5}s`, animationDuration: `${3 + i * 0.4}s` }} />
-          ))}
-        </div>
-
-        {/* Content */}
-        <div className="relative h-full flex flex-col">
-          {screen === "loading"  && <LoadingScreen onDone={() => setScreen("explore")} />}
-          {screen === "explore"  && (
-            <ExplorationScreen
-              room={currentRoom}
-              progress={progress}
-              maxProgress={MAX_PROGRESS}
-              onCombat={startCombat}
-              onEvent={startEvent}
-            />
-          )}
-          {screen === "combat"   && enemy && (
-            <CombatScreen
-              player={player}
-              enemy={enemy}
-              onPlayerAtk={handleAttack}
-              onFaith={handleFaith}
-              log={log}
-              logType={logType}
-              playerHit={playerHit}
-              enemyHit={enemyHit}
-              disabled={disabled}
-            />
-          )}
-          {screen === "quiz"     && activeQuiz && (
-            <QuizScreen question={activeQuiz} onAnswer={handleQuizAnswer} />
-          )}
-          {screen === "event"    && activeEvent && (
-            <EventScreen
-              event={activeEvent}
-              onChoice1={() => handleEventChoice(1)}
-              onChoice2={() => handleEventChoice(2)}
-            />
-          )}
-          {screen === "victory"  && <VictoryScreen xp={100} onExit={() => { window.location.href = "/dashboard"; }} />}
-          {screen === "gameover" && <GameOverScreen onRetry={() => window.location.reload()} />}
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
