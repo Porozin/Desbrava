@@ -71,13 +71,14 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <div style={{ position: 'relative' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '14px', border: '2px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', background: 'rgba(255,255,255,0.05)' }}>
+        <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => router.push('/perfil')} title="Ver Perfil">
+          <div style={{ width: '56px', height: '56px', borderRadius: '14px', border: '2px solid rgba(99,102,241,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', background: 'rgba(99,102,241,0.1)', transition: 'all 0.2s ease', boxShadow: '0 0 12px rgba(99,102,241,0.2)' }}>
             {user.photoURL && user.photoURL.length <= 4 ? user.photoURL : "🛡️"}
           </div>
           <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', background: 'var(--accent-primary)', color: '#fff', fontSize: '0.8rem', fontWeight: 'bold', width: '26px', height: '26px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #0f172a' }}>
             {currentLevel}
           </div>
+          <div style={{ position: 'absolute', top: '-4px', left: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', border: '2px solid #0f172a' }} />
         </div>
       </header>
 
